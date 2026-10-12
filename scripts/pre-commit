@@ -1,11 +1,14 @@
 #!/usr/bin/env sh
-# Pre-commit: both apps' tests. Lint and coverage are pre-push.
+# Pre-commit: both apps' tests, in parallel via lefthook. Lint is pre-push.
 set -eu
 
 ROOT=$(git rev-parse --show-toplevel)
 cd "$ROOT"
 
-echo "==> Tests"
-make test
+if ! command -v lefthook >/dev/null 2>&1; then
+  echo "lefthook is not on PATH. Install it, then re-run." >&2
+  echo "https://github.com/evilmartians/lefthook#installation" >&2
+  exit 1
+fi
 
-echo "Pre-commit checks passed."
+exec lefthook run pre-commit "$@"

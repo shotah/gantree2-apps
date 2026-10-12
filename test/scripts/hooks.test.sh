@@ -12,24 +12,26 @@ if [[ ! -x "$root/scripts/pre-push" ]]; then
   echo "FAIL: scripts/pre-push should be executable" >&2
   exit 1
 fi
-grep -q '^make test$' "$root/scripts/pre-commit" || {
-  echo "FAIL: pre-commit should run make test" >&2
+grep -q 'lefthook run pre-commit' "$root/scripts/pre-commit" || {
+  echo "FAIL: pre-commit should run lefthook" >&2
   exit 1
 }
-if grep -q '^make check$' "$root/scripts/pre-commit"; then
-  echo "FAIL: pre-commit should not run make check (that is pre-push)" >&2
-  exit 1
-fi
-if grep -q 'make coverage' "$root/scripts/pre-commit"; then
-  echo "FAIL: pre-commit should not run make coverage (that is pre-push)" >&2
-  exit 1
-fi
 if grep -q 'make lint' "$root/scripts/pre-commit"; then
   echo "FAIL: pre-commit should not run make lint (that is pre-push)" >&2
   exit 1
 fi
-grep -q '^make check$' "$root/scripts/pre-push" || {
-  echo "FAIL: pre-push should run make check" >&2
+grep -q 'lefthook run pre-push' "$root/scripts/pre-push" || {
+  echo "FAIL: pre-push should run lefthook" >&2
+  exit 1
+}
+for name in android: ios-lint: ios-test: scripts:; do
+  grep -q "$name" "$root/lefthook.yml" || {
+    echo "FAIL: lefthook.yml pre-push missing $name" >&2
+    exit 1
+  }
+done
+grep -q 'parallel: true' "$root/lefthook.yml" || {
+  echo "FAIL: lefthook.yml should run jobs in parallel" >&2
   exit 1
 }
 grep -q 'pre-push' "$root/Makefile" || {

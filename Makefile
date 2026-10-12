@@ -24,13 +24,15 @@ help: ## Show available targets
 	@echo "  make ios-coverage      make -C gantree-ios coverage"
 	@echo "  make ios-build         Unsigned Simulator build (needs Xcode)"
 	@echo "  make theme             Print theme + brand export commands"
-	@echo "  make install-hooks     Pre-commit: make test. Pre-push: make check."
+	@echo "  make gate              Pre-push set: Android, iOS lint, iOS tests, scripts"
+	@echo "  make install-hooks     lefthook pre-commit (tests) and pre-push (lint+test)"
 	@echo "  make version           Show VERSION + next tag (dry-run)"
-	@echo "  make release           Bump tag + latest, update VERSION, push"
+	@echo "  make release           One VERSION, one tag, both apps"
 	@echo "  make clean             Both apps' clean"
 	@echo
 	@echo "Release: make release BUMP=patch|minor|major   or   make release TAG=v0.2.0"
-	@echo "One tag ships both apps. Local iOS tests use Docker; CI does not."
+	@echo "One tag ships both apps. Lefthook does not bump VERSION."
+	@echo "Local iOS tests use Docker; CI does not."
 	@echo
 
 .PHONY: test-scripts
@@ -94,8 +96,12 @@ theme: ## Print export commands; run them from the gantree checkout
 	@echo "  npm run theme:export -- ../gantree2-apps/shared/theme --kotlin-package com.gantree.theme"
 	@echo "  node scripts/icons.ts --apps"
 
+.PHONY: gate
+gate: ## Lint and test both apps in parallel (same set as pre-push)
+	lefthook run pre-push
+
 .PHONY: install-hooks
-install-hooks: ## Install pre-commit (make test) and pre-push (make check)
+install-hooks: ## Install lefthook pre-commit (tests) and pre-push (lint + test)
 	@top=$$(git rev-parse --show-toplevel 2>/dev/null); \
 	here=$$(cd "$(dir $(abspath $(lastword $(MAKEFILE_LIST))))" && pwd); \
 	if [ -z "$$top" ] || [ "$$top" != "$$here" ]; then \
@@ -107,7 +113,8 @@ install-hooks: ## Install pre-commit (make test) and pre-push (make check)
 	chmod +x .git/hooks/pre-commit
 	cp scripts/pre-push .git/hooks/pre-push
 	chmod +x .git/hooks/pre-push
-	@echo "Installed .git/hooks/pre-commit and pre-push"
+	@echo "Installed .git/hooks/pre-commit and pre-push (lefthook)"
+	@command -v lefthook >/dev/null || echo "lefthook is not on PATH; hooks fail until it is installed" >&2
 
 .PHONY: version
 version: ## Show VERSION file and next tag (dry-run)

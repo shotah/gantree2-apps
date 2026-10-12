@@ -1,11 +1,14 @@
 #!/usr/bin/env sh
-# Pre-push: lint, tests, and coverage for both apps.
+# Pre-push: Android lint+tests, iOS lint, iOS tests, root scripts. Parallel.
 set -eu
 
 ROOT=$(git rev-parse --show-toplevel)
 cd "$ROOT"
 
-echo "==> Check"
-make check
+if ! command -v lefthook >/dev/null 2>&1; then
+  echo "lefthook is not on PATH. Install it, then re-run." >&2
+  echo "https://github.com/evilmartians/lefthook#installation" >&2
+  exit 1
+fi
 
-echo "Pre-push checks passed."
+exec lefthook run pre-push "$@"

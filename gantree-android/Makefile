@@ -35,6 +35,7 @@ help: ## Show available targets
 	@echo "  make dhu            Android Auto Desktop Head Unit"
 	@echo "  make logs           logcat for the running gantree process"
 	@echo "  make lint           Android lint (lintDebug)"
+	@echo "  make lint-test      lint + unit tests, one Gradle build"
 	@echo "  make coverage       JaCoCo XML + 70% mailbox + mouth bar"
 	@echo "  make check-app      lint + test + coverage (one Gradle invocation)"
 	@echo "  make check          script tests + check-app"
@@ -137,6 +138,10 @@ test: test-scripts test-app ## Script tests + JVM unit tests
 .PHONY: lint
 lint: ensure-sdk ## Android lint
 	$(GRADLE) lintDebug
+
+.PHONY: lint-test
+lint-test: ensure-sdk ## Lint and unit tests in one Gradle build (--parallel)
+	$(GRADLE) --parallel lintDebug testDebugUnitTest
 
 .PHONY: coverage-gate
 coverage-gate: ## Fail if mailbox + mouth line coverage is below COVERAGE_MIN (70)

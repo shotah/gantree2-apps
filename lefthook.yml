@@ -1,0 +1,46 @@
+# Git hooks. `make install-hooks` copies scripts/pre-commit and scripts/pre-push,
+# which exec `lefthook run`. `make gate` runs the pre-push set without pushing.
+#
+# Pre-push is four jobs at once:
+#   android   script tests, then lintDebug + unit tests in one Gradle build
+#   ios-lint  swift-format
+#   ios-test  script tests + Mailbox tests
+#   scripts   root test/scripts
+# Two Gradle processes on gantree-android lock build/. Lint and unit tests
+# share one `./gradlew --parallel` so they still overlap. iOS lint and iOS
+# tests are separate Docker runs.
+#
+# Version bumps stay `make release`. One VERSION, one tag, both apps.
+
+pre-commit:
+  parallel: true
+  commands:
+    android-test:
+      glob:
+        - gantree-android/**
+        - shared/**
+      run: make -C gantree-android test
+    ios-test:
+      glob:
+        - gantree-ios/**
+        - shared/**
+      run: make -C gantree-ios test
+    scripts:
+      glob:
+        - scripts/**
+        - test/**
+        - Makefile
+        - VERSION
+      run: make test-scripts
+
+pre-push:
+  parallel: true
+  commands:
+    android:
+      run: make -C gantree-android test-scripts lint-test
+    ios-lint:
+      run: make -C gantree-ios lint
+    ios-test:
+      run: make -C gantree-ios test
+    scripts:
+      run: make test-scripts

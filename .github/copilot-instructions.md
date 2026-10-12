@@ -15,9 +15,15 @@ make android-apk
 make ios-test
 make ios-lint
 make ios-build
+make gate
+make release
 ```
 
 `make ios-test` uses Docker locally. `make ios-build` needs Xcode.
+`make gate` is the pre-push set: Android lint and unit tests in one
+Gradle build, iOS lint, iOS tests, and root script tests, in parallel.
+`make release` bumps the one root `VERSION` and tags both apps. Do not
+give the apps separate version numbers. Lefthook does not bump it.
 
 `shared/theme` and `shared/brand` are generated from the gantree2 checkout (`npm run theme:export` and `node scripts/icons.ts --apps`). Do not hand-edit them.
 

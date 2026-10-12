@@ -73,5 +73,16 @@ That writes `shared/brand/` (Android mipmaps and `play-store.png`, iOS
 | Debug build | `make -C gantree-android build` | `make -C gantree-ios ios` (Xcode) |
 | Docs | [gantree-android/docs/setup.md](gantree-android/docs/setup.md) | [gantree-ios/docs/setup.md](gantree-ios/docs/setup.md) |
 
-One `VERSION` at the root. One tag ships both apps. CI is
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+One `VERSION` at the root. `make release` bumps it (`BUMP=patch` by
+default, or `minor` / `major`, or `TAG=v0.2.0`), commits that file,
+tags `vX.Y.Z`, and moves the floating `latest` tag. The release
+workflow builds the APK and the iOS archive from that one tag. The
+apps do not get separate version numbers. Lefthook does not bump
+`VERSION`. CI is [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+`make install-hooks` installs lefthook. Pre-commit runs both apps'
+tests in parallel. Pre-push runs four jobs at once: Android (script
+tests, then lint and unit tests in one Gradle build), iOS lint, iOS
+tests, and the root script tests. `make gate` runs that set without
+pushing. Install lefthook first:
+<https://github.com/evilmartians/lefthook#installation>.
