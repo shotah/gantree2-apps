@@ -1,0 +1,50 @@
+name: Bug
+description: Something broke in gantree-android or gantree-ios. One bug.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        What you did, what you saw, what you expected. One bug.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you saw, and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: where
+    attributes:
+      label: Where
+      description: Screen, Android or iOS, or file.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - iOS
+        - Both
+        - Shared theme or brand
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: VERSION file, tag, or main.
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Redact keys, cookies, and tokens before pasting.
+      render: text
+    validations:
+      required: false

@@ -1,0 +1,41 @@
+# Categories for `gh release create --generate-notes` (workflows/release.yml).
+# A pull request lands in the first category whose label it carries.
+# `skip-changelog` drops a pull request from the notes.
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+  categories:
+    - title: Security
+      labels:
+        - security
+    - title: Android
+      labels:
+        - android
+    - title: iOS
+      labels:
+        - ios
+    - title: Shared
+      labels:
+        - shared
+    - title: Features
+      labels:
+        - enhancement
+    - title: Bug fixes
+      labels:
+        - bug
+    - title: Documentation
+      labels:
+        - docs
+    - title: Tests
+      labels:
+        - tests
+    - title: CI
+      labels:
+        - ci
+    - title: Dependencies
+      labels:
+        - dependencies
+    - title: Other changes
+      labels:
+        - "*"

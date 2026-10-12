@@ -1,0 +1,16 @@
+# Last match wins. The catch-all is first. The rows under it name the
+# trees a review should not skim past. One owner.
+
+* @shotah
+
+# Kotlin Android app. Compose, Car App Library, Gradle.
+/gantree-android/** @shotah
+
+# Swift iOS app. SwiftUI, SwiftPM Mailbox, Xcode Helm target.
+/gantree-ios/** @shotah
+
+# Generated theme and brand from the gantree2 checkout.
+/shared/** @shotah
+
+# Workflows, templates, ownership.
+/.github/** @shotah

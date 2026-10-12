@@ -4,11 +4,20 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
   - package-ecosystem: gradle
     directory: /gantree-android
     schedule:
       interval: weekly
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
   - package-ecosystem: swift
     directory: /gantree-ios
     schedule:
       interval: weekly
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies

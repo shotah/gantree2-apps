@@ -1,0 +1,79 @@
+name: codeql
+
+# Settings → Code security: leave CodeQL default setup off. This file is the scan.
+# Android is the Gradle app. iOS is the SwiftPM Mailbox package, not the Xcode app target.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "20 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Analyze (java-kotlin)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: java-kotlin
+          build-mode: manual
+          queries: security-extended
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build Android debug
+        working-directory: gantree-android
+        run: ./gradlew --no-daemon assembleDebug --build-cache
+
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          category: "/language:java-kotlin"
+
+  ios:
+    name: Analyze (swift)
+    runs-on: macos-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: swift
+          build-mode: manual
+          queries: security-extended
+
+      # Xcode Swift on the macOS runner. Do not use swift-actions/setup-swift here.
+
+      - name: Build SwiftPM Mailbox
+        working-directory: gantree-ios
+        run: swift build --package-path .
+
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          category: "/language:swift"

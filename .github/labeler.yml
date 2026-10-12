@@ -1,0 +1,37 @@
+android:
+  - changed-files:
+      - any-glob-to-any-file: gantree-android/**
+
+ios:
+  - changed-files:
+      - any-glob-to-any-file: gantree-ios/**
+
+shared:
+  - changed-files:
+      - any-glob-to-any-file: shared/**
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - docs/**
+          - README.md
+          - gantree-android/**/*.md
+          - gantree-ios/**/*.md
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
+          - Makefile
+          - scripts/**
+          - gantree-android/Makefile
+          - gantree-ios/Makefile
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - test/**
+          - gantree-android/app/src/test/**
+          - gantree-android/test/**
+          - gantree-ios/Tests/**
+          - gantree-ios/test/**

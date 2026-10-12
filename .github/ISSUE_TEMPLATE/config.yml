@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: gantree Worker
+    url: https://github.com/shotah/gantree2/discussions/categories/q-a
+    about: Questions about the Worker, sign-in, and the phone socket. A bug in either phone app still belongs in an issue here.
