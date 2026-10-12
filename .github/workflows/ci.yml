@@ -1,0 +1,346 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Pin a commit SHA or tag. `main` follows the branch tip; replace it
+  # with a SHA when this repo should not move with every gantree push.
+  GANTREE_REF: main
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      android: ${{ steps.out.outputs.android }}
+      ios: ${{ steps.out.outputs.ios }}
+      shared: ${{ steps.out.outputs.shared }}
+      root: ${{ steps.out.outputs.root }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name != 'workflow_dispatch'
+        with:
+          # `.github/workflows/**` is in every filter so a workflow edit runs all jobs.
+          filters: |
+            android:
+              - 'gantree-android/**'
+              - 'shared/**'
+              - '.github/workflows/**'
+              - 'VERSION'
+            ios:
+              - 'gantree-ios/**'
+              - 'shared/**'
+              - '.github/workflows/**'
+              - 'VERSION'
+            shared:
+              - 'shared/**'
+              - '.github/workflows/**'
+            root:
+              - 'Makefile'
+              - 'scripts/**'
+              - 'test/**'
+              - 'VERSION'
+              - 'README.md'
+              - 'docs/**'
+              - '.gitignore'
+              - 'LICENSE'
+              - '.github/workflows/**'
+
+      - id: out
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "android=true" >> "$GITHUB_OUTPUT"
+            echo "ios=true" >> "$GITHUB_OUTPUT"
+            echo "shared=true" >> "$GITHUB_OUTPUT"
+            echo "root=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "android=${{ steps.filter.outputs.android }}" >> "$GITHUB_OUTPUT"
+            echo "ios=${{ steps.filter.outputs.ios }}" >> "$GITHUB_OUTPUT"
+            echo "shared=${{ steps.filter.outputs.shared }}" >> "$GITHUB_OUTPUT"
+            echo "root=${{ steps.filter.outputs.root }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Root script tests
+        if: steps.out.outputs.root == 'true'
+        run: |
+          chmod +x scripts/semver.sh scripts/release.sh scripts/pre-commit scripts/pre-push test/scripts/*.test.sh
+          make test-scripts
+
+  android:
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: gantree-android
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # Google stopped serving the deprecated `tools` package on 2026-09-15;
+      # the action's default `tools platform-tools` fails sdkmanager.
+      # AGP fetches platforms / build-tools itself once licenses are accepted.
+      # https://github.com/android-actions/setup-android/issues/537
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Script tests
+        run: |
+          chmod +x scripts/*.sh test/scripts/*.test.sh
+          make test-scripts
+
+      - name: Lint + test + coverage
+        run: ./gradlew --no-daemon lintDebug testDebugUnitTest createDebugUnitTestCoverageReport --build-cache --configuration-cache
+
+      - name: Coverage bar (70%)
+        run: |
+          set -euo pipefail
+          chmod +x scripts/jacoco-pct.sh scripts/coverage-gate.sh
+          XML="$(find app/build/reports -name 'report.xml' | head -n1)"
+          test -n "${XML}"
+          COVERAGE_MIN=70 ./scripts/coverage-gate.sh "$XML"
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-android
+          path: |
+            gantree-android/app/build/reports/coverage/**/report.xml
+            gantree-android/app/build/reports/jacoco/**/*.xml
+
+      - name: Generate coverage badge
+        run: |
+          set -euo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}/badges"
+          chmod +x scripts/coverage-badge.sh
+          XML="$(find app/build/reports -name 'report.xml' | head -n1)"
+          test -n "${XML}"
+          ./scripts/coverage-badge.sh "$XML" "${GITHUB_WORKSPACE}/badges/android.svg"
+
+      - name: Upload coverage badge
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-badge-android
+          path: badges/android.svg
+
+  ios:
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: gantree-ios
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: swift-actions/setup-swift@v3
+        with:
+          swift-version: "6.3.3"
+
+      - name: Script tests
+        run: |
+          chmod +x scripts/*.sh test/scripts/*.test.sh
+          make test-scripts
+
+      # make lint / make coverage wrap Docker. On the runner Swift is
+      # already installed, so call the same commands directly.
+      - name: Swift format
+        run: ./scripts/swift-format.sh lint
+
+      - name: Mailbox tests + coverage
+        run: |
+          set -euo pipefail
+          chmod +x scripts/*.sh
+          swift test --enable-code-coverage
+          ./scripts/coverage-export.sh .build/coverage.json
+          COVERAGE_MIN=70 ./scripts/coverage-gate.sh .build/coverage.json
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-ios
+          path: gantree-ios/.build/coverage.json
+
+      - name: Generate coverage badge
+        run: |
+          set -euo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}/badges"
+          ./scripts/coverage-badge.sh .build/coverage.json "${GITHUB_WORKSPACE}/badges/ios.svg"
+
+      - name: Upload coverage badge
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-badge-ios
+          path: badges/ios.svg
+
+  # Hosted Mac: compile the SwiftUI shell. Linux cannot see UIKit.
+  # Does not need an Apple ID. Unsigned Simulator build — not an installable IPA.
+  ios-app:
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Unsigned Simulator build
+        run: make -C gantree-ios ios
+
+  # gh-pages hosts badges/android.svg and badges/ios.svg.
+  # Pages source: branch gh-pages / (root). Enable that once in repo settings.
+  badges:
+    if: ${{ always() && !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'push' && (needs.android.result == 'success' || needs.android.result == 'skipped') && (needs.ios.result == 'success' || needs.ios.result == 'skipped') && (needs.android.result == 'success' || needs.ios.result == 'success') }}
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: coverage-badge-android
+          path: badges-in/android
+
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: coverage-badge-ios
+          path: badges-in/ios
+
+      - name: Push gh-pages (coverage badges)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          WORKDIR=$(mktemp -d)
+          cd "$WORKDIR"
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO}.git"
+
+          if git fetch --depth 1 origin gh-pages; then
+            git checkout -B gh-pages FETCH_HEAD
+          else
+            git checkout --orphan gh-pages
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+
+          mkdir -p badges
+          copied=0
+          if [[ -d "${GITHUB_WORKSPACE}/badges-in/android" ]]; then
+            src="$(find "${GITHUB_WORKSPACE}/badges-in/android" -name 'android.svg' -type f | head -n1 || true)"
+            if [[ -n "${src}" ]]; then
+              cp "$src" badges/android.svg
+              copied=1
+            fi
+          fi
+          if [[ -d "${GITHUB_WORKSPACE}/badges-in/ios" ]]; then
+            src="$(find "${GITHUB_WORKSPACE}/badges-in/ios" -name 'ios.svg' -type f | head -n1 || true)"
+            if [[ -n "${src}" ]]; then
+              cp "$src" badges/ios.svg
+              copied=1
+            fi
+          fi
+          if [[ "$copied" -eq 0 ]]; then
+            echo "No coverage badges to publish."
+            exit 0
+          fi
+          touch .nojekyll
+
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No gh-pages change; skipping push."
+          else
+            git commit -m "chore: publish coverage badges [skip ci]"
+            git push origin HEAD:gh-pages
+          fi
+
+  theme-drift:
+    needs: changes
+    if: needs.changes.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: gantree2-apps
+          persist-credentials: false
+
+      - uses: actions/checkout@v7
+        with:
+          repository: shotah/gantree2
+          ref: ${{ env.GANTREE_REF }}
+          path: gantree2
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Install DejaVu fonts
+        run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core
+
+      - name: Install gantree dependencies
+        working-directory: gantree2
+        run: npm ci
+
+      - name: Export theme
+        working-directory: gantree2
+        run: node scripts/theme-export.ts "${GITHUB_WORKSPACE}/gantree2-apps/shared/theme" --kotlin-package com.gantree.theme
+
+      - name: Export brand
+        working-directory: gantree2
+        run: node scripts/icons.ts --apps --out=/tmp/gantree-icons
+
+      - name: Shared tree matches export
+        run: |
+          set -euo pipefail
+          dirty="$(git -C gantree2-apps status --porcelain -- shared/)"
+          if [[ -n "$dirty" ]]; then
+            printf '%s\n' "$dirty"
+            git -C gantree2-apps diff -- shared/ || true
+            exit 1
+          fi

@@ -1,0 +1,50 @@
+# Screens
+
+What the mouth looks like. `make shot` on a Mac with Xcode writes
+`assets/docs/<name>.png` from the Simulator (`-shot <name>`, DEBUG).
+`SHOT=phone-thread` shoots one. `SHOT_DRY=1` prints the list. This
+Deck has no Simulator, so it refuses a real capture. The SwiftUI
+shell is in `app/Helm`.
+
+Boom is the neutral default (shared with gantree). Paper is neutral
+daylight. Marquee is one mood. Settings groups the catalog as Plain
+and Moods (`Look.themeIds`).
+
+Samples are canned Ada/Kit turns — not a live agent. Release builds
+ignore a `sample` launch argument.
+
+---
+
+## Phone
+
+| Shot | Sample | What it is |
+| --- | --- | --- |
+| `phone-unsigned` | `unsigned` | Google door. Avatar + cog. |
+| `phone-empty` | `empty` | Live, nothing said yet. |
+| `phone-thread` | `thread` | Ada ↔ Kit. Boom. |
+| `phone-stream` | `stream` | Draft bubble + `Live · typing…`. |
+| `phone-photo` | `photo` | Hatch photo in a you-bubble. |
+| `phone-down` | `down` | Socket down; local echo still `sending`. |
+| `phone-settings` | `empty` | Settings: origin, slug, theme catalog, font, photo size, follow Kit, backdrop, Test car voice. DEBUG builds also chip `sampleIds`. |
+| `phone-emoji` | `thread` | Emoji picker over compose. |
+| `phone-attach` | `thread` | Paperclip: photo, camera, commands, GPS, pin. |
+| `phone-draft` | `thread` | Staged photo on compose: thumbnail + Remove; Send carries caption + JPEG. |
+| `phone-react` | `thread` | Long-press on Kit's last line: inline reaction strip, two rows of six. |
+| `phone-keyboard` | `thread` | Compose focused, keyboard up. Header and thread stay put. |
+| `phone-thread-marquee` | `thread` | Same thread, Marquee. |
+| `phone-thread-paper` | `thread` | Same thread, Paper (daylight). |
+
+## CarPlay
+
+Later. List + conversation stand-in. Voice is CarPlay host STT, not
+Siri as a second mailbox.
+
+| Shot | Sample | What it is |
+| --- | --- | --- |
+| `car-empty` | `empty` | CarPlay list, empty. |
+| `car-thread` | `thread` | CarPlay list, last six turns. |
+
+Phone PNGs land in `assets/docs/` from `make shot`. Car rows stay
+off until a conversation screen exists. Cab's current shots are
+the look to match:
+[gantree-android `docs/screens.md`](../../gantree-android/docs/screens.md).

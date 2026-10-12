@@ -1,0 +1,197 @@
+package com.gantree.cab
+
+import android.content.Context
+import android.content.SharedPreferences
+import com.gantree.cab.mailbox.DEFAULT_FONT
+import com.gantree.cab.mailbox.DEFAULT_LANG
+import com.gantree.cab.mailbox.DEFAULT_PHOTO_SIZE
+import com.gantree.cab.mailbox.DEFAULT_THEME
+import com.gantree.cab.mailbox.knownTheme
+import com.gantree.cab.mailbox.liveBearer
+import com.gantree.cab.mailbox.parseFont
+import com.gantree.cab.mailbox.parseLang
+import com.gantree.cab.mailbox.parsePhotoSize
+import com.gantree.cab.mailbox.parseTheme
+
+class CabPrefs(ctx: Context) {
+  private val p = load(ctx)
+  @Volatile
+  private var heldSpike: String = p.getString(SPIKE, "") ?: ""
+
+  var origin: String
+    get() = p.getString(ORIGIN, null)?.takeIf { it.isNotBlank() } ?: BuildConfig.MAILBOX_ORIGIN
+    set(value) { write(ORIGIN, value.trim()) }
+
+  var slug: String
+    get() = p.getString(SLUG, "kit") ?: "kit"
+    set(value) { write(SLUG, value.trim().lowercase()) }
+
+  var spike: String
+    get() = heldSpike
+    set(value) { putSpike(value, persistToDisk = true) }
+
+  var session: String
+    get() = p.getString(SESSION, "") ?: ""
+    set(value) {
+      val ed = p.edit().putString(SESSION, value)
+      if (value.isNotBlank()) {
+        heldSpike = ""
+        ed.remove(SPIKE)
+      }
+      ed.apply()
+    }
+
+  var sessionExp: Long
+    get() = p.getLong(SESSION_EXP, 0L)
+    set(value) { p.edit().putLong(SESSION_EXP, value).apply() }
+
+  var email: String
+    get() = p.getString(EMAIL, "") ?: ""
+    set(value) { write(EMAIL, value) }
+
+  var gps: Boolean
+    get() = p.getString(GPS, "off") == "on"
+    set(value) { p.edit().putString(GPS, if (value) "on" else "off").apply() }
+
+  var theme: String
+    get() = parseTheme(p.getString(THEME, DEFAULT_THEME))
+    set(value) { p.edit().putString(THEME, parseTheme(value)).apply() }
+
+  var font: String
+    get() = parseFont(p.getString(FONT, DEFAULT_FONT))
+    set(value) { p.edit().putString(FONT, parseFont(value)).apply() }
+
+  /** Same ids as the PWA's `localStorage["gantree.photo"]`. */
+  var photoSize: String
+    get() = parsePhotoSize(p.getString(PHOTO, DEFAULT_PHOTO_SIZE))
+    set(value) { p.edit().putString(PHOTO, parsePhotoSize(value)).apply() }
+
+  /** Settings → Backdrop. Default on; only `"off"` keeps the theme canvas. */
+  var backdrop: Boolean
+    get() = p.getString(BACKDROP, "on") != "off"
+    set(value) { p.edit().putString(BACKDROP, if (value) "on" else "off").apply() }
+
+  /** Settings → Follow Kit's mood. Default on; only `"off"` keeps yours. */
+  var followTheme: Boolean
+    get() = p.getString(FOLLOW_THEME, "on") != "off"
+    set(value) { p.edit().putString(FOLLOW_THEME, if (value) "on" else "off").apply() }
+
+  /** Settings → Language. Same ids as `localStorage["gantree.lang"]`; junk → `en`. */
+  var lang: String
+    get() = parseLang(p.getString(LANG, DEFAULT_LANG))
+    set(value) { p.edit().putString(LANG, parseLang(value)).apply() }
+
+  /** Header mic: hold-to-talk instead of typing. Off unless it says `"on"` — same as `gantree.voice`. */
+  var voice: Boolean
+    get() = p.getString(VOICE, "off") == "on"
+    set(value) { p.edit().putString(VOICE, if (value) "on" else "off").apply() }
+
+  /**
+   * Last `/api/auth/config` `voice` answer, so the header mic paints on launch
+   * instead of flickering in when the GET lands. Only a 2xx JSON body writes it.
+   */
+  var voiceOffered: Boolean
+    get() = p.getString(VOICE_OFFERED, "off") == "on"
+    set(value) { p.edit().putString(VOICE_OFFERED, if (value) "on" else "off").apply() }
+
+  /**
+   * Last mood the room announced, per slug, so launch paints it before
+   * `/api/theme` answers. Same idea as the PWA's `localStorage["gantree.roomTheme"]`.
+   */
+  fun roomTheme(slug: String): String = knownTheme(p.getString("$ROOM_THEME.$slug", null)).orEmpty()
+
+  fun putRoomTheme(slug: String, id: String) {
+    write("$ROOM_THEME.$slug", knownTheme(id).orEmpty())
+  }
+
+  /**
+   * Goals board as it was when the drawer was last open, area → row JSON,
+   * so the header badge counts changes, not aims. Mirrors `gantree.aimsSeen`.
+   */
+  var aimsSeen: String
+    get() = p.getString(AIMS_SEEN, "") ?: ""
+    set(value) { write(AIMS_SEEN, value) }
+
+  /**
+   * Tasks list as it was when the drawer was last open, slug → row JSON.
+   * A rewrite changes the id, not the task, so the badge keys on slug.
+   * Mirrors `gantree.todoSeen`.
+   */
+  var todoSeen: String
+    get() = p.getString(TODO_SEEN, "") ?: ""
+    set(value) { write(TODO_SEEN, value) }
+
+  val bearer: String
+    get() = liveBearer(session, sessionExp, heldSpike, System.currentTimeMillis() / 1000L)
+
+  val signedIn: Boolean
+    get() = bearer.isNotBlank()
+
+  fun putSpike(value: String, persistToDisk: Boolean) {
+    heldSpike = value
+    write(SPIKE, if (persistToDisk) value else "")
+  }
+
+  fun signOut() {
+    p.edit().remove(SESSION).remove(EMAIL).remove(SESSION_EXP).apply()
+  }
+
+  /** Same-process readers see this immediately; MailboxService is this process. */
+  private fun write(key: String, value: String) {
+    p.edit().putString(key, value).apply()
+  }
+
+  companion object {
+    private const val ORIGIN = "origin"
+    private const val SLUG = "slug"
+    private const val SPIKE = "spike"
+    private const val SESSION = "session"
+    private const val SESSION_EXP = "session_exp"
+    private const val EMAIL = "email"
+    private const val GPS = "gps"
+    private const val THEME = "theme"
+    private const val FONT = "font"
+    private const val PHOTO = "photo"
+    private const val BACKDROP = "backdrop"
+    private const val FOLLOW_THEME = "followTheme"
+    private const val LANG = "lang"
+    private const val VOICE = "voice"
+    private const val VOICE_OFFERED = "voiceOffered"
+    private const val ROOM_THEME = "roomTheme"
+    private const val AIMS_SEEN = "aimsSeen"
+    private const val TODO_SEEN = "todoSeen"
+    private const val PREFS_NAME = "gantree"
+    private const val LEGACY_PREFS_NAME = "cab"
+
+    private fun load(ctx: Context): SharedPreferences {
+      val next = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+      if (!next.contains(ORIGIN) && !next.contains(SLUG)) {
+        val old = ctx.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
+        if (old.all.isNotEmpty()) {
+          copyFrom(old, next)
+        }
+      }
+      return next
+    }
+
+    /** One-time copy. The legacy file stays so a downgrade can still read it. */
+    private fun copyFrom(old: SharedPreferences, next: SharedPreferences) {
+      val ed = next.edit()
+      for ((key, value) in old.all) {
+        when (value) {
+          is String -> ed.putString(key, value)
+          is Boolean -> ed.putBoolean(key, value)
+          is Int -> ed.putInt(key, value)
+          is Long -> ed.putLong(key, value)
+          is Float -> ed.putFloat(key, value)
+          is Set<*> -> {
+            @Suppress("UNCHECKED_CAST")
+            ed.putStringSet(key, value as Set<String>)
+          }
+          else -> Unit
+        }
+      }
+      ed.apply()
+    }
+  }
+}

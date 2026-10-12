@@ -1,0 +1,289 @@
+import XCTest
+
+@testable import Mailbox
+
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
+final class MockHTTP: HTTPTransport {
+  var queue: [HTTPResult] = []
+  var requests: [URLRequest] = []
+  var throwNext = false
+
+  func perform(_ request: URLRequest) throws -> HTTPResult {
+    requests.append(request)
+    if throwNext {
+      throw AuthError(code: 0, body: "offline")
+    }
+    return queue.removeFirst()
+  }
+}
+
+final class AuthThemeJpegTests: XCTestCase {
+  func testConfigReadsModeAndGoogle() throws {
+    let http = MockHTTP()
+    http.queue = [HTTPResult(status: 200, body: Data(#"{"mode":"google","google":true}"#.utf8))]
+    let api = AuthApi(transport: http)
+    let got = try api.config(origin: "http://mailbox.test/")
+    XCTAssertEqual("google", got.mode)
+    XCTAssertEqual(true, got.google)
+    XCTAssertEqual("/api/auth/config", http.requests[0].url?.path)
+  }
+
+  func testMeReadsAgentsAndSkipsBlanks() throws {
+    let http = MockHTTP()
+    http.queue = [
+      HTTPResult(
+        status: 200,
+        body: Data(
+          #"{"sub":"u1","email":"ada@example.com","role":"member","agents":["kit","", "dock","Nope!"],"cranes":["other"]}"#
+            .utf8)
+      )
+    ]
+    let api = AuthApi(transport: http)
+    let got = try api.me(origin: "http://mailbox.test/", token: "jwe")
+    XCTAssertEqual("u1", got.sub)
+    XCTAssertEqual("ada@example.com", got.email)
+    XCTAssertEqual(["kit", "dock"], got.agents)
+    XCTAssertEqual("Bearer jwe", http.requests[0].value(forHTTPHeaderField: "Authorization"))
+  }
+
+  func testMeFallsBackWhenOnlyCranesArePresent() throws {
+    let http = MockHTTP()
+    http.queue = [
+      HTTPResult(
+        status: 200,
+        body: Data(#"{"sub":"u1","email":"ada@example.com","cranes":["kit","dock"]}"#.utf8)
+      )
+    ]
+    let got = try AuthApi(transport: http).me(origin: "http://mailbox.test/", token: "jwe")
+    XCTAssertEqual(["kit", "dock"], got.agents)
+  }
+
+  func testConfigReadsTheFiveKeyBody() throws {
+    let http = MockHTTP()
+    http.queue = [
+      HTTPResult(
+        status: 200,
+        body: Data(
+          #"{"mode":"google","google":true,"voice":true,"version":"0.2.10","dev":true}"#.utf8)
+      )
+    ]
+    let got = try AuthApi(transport: http).config(origin: "http://mailbox.test/")
+    XCTAssertEqual("google", got.mode)
+    XCTAssertEqual(true, got.google)
+    XCTAssertEqual(true, got.voice)
+  }
+
+  func testConfigIgnoresAdditiveKeys() throws {
+    let http = MockHTTP()
+    http.queue = [
+      HTTPResult(
+        status: 200,
+        body: Data(#"{"mode":"google","google":true,"version":"0.4.0","dev":true}"#.utf8))
+    ]
+    let api = AuthApi(transport: http)
+    let got = try api.config(origin: "http://mailbox.test/")
+    XCTAssertEqual("google", got.mode)
+    XCTAssertEqual(true, got.google)
+    XCTAssertNil(http.requests[0].value(forHTTPHeaderField: "Cookie"))
+  }
+
+  func testNonceReadsTheValue() {
+    let http = MockHTTP()
+    http.queue = [HTTPResult(status: 200, body: Data(#"{"nonce":"nce-1"}"#.utf8))]
+    let api = AuthApi(transport: http)
+    XCTAssertEqual("nce-1", api.nonce(origin: "http://mailbox.test/"))
+    XCTAssertEqual("/api/auth/nonce", http.requests[0].url?.path)
+    XCTAssertEqual("GET", http.requests[0].httpMethod)
+    XCTAssertNil(http.requests[0].value(forHTTPHeaderField: "Cookie"))
+  }
+
+  func testNonceMissingRouteReturnsNil() {
+    let http = MockHTTP()
+    http.queue = [HTTPResult(status: 404, body: Data(#"{"error":"not found"}"#.utf8))]
+    XCTAssertNil(AuthApi(transport: http).nonce(origin: "http://mailbox.test/"))
+  }
+
+  func testNonceEmptyBodyReturnsNil() {
+    let http = MockHTTP()
+    http.queue = [HTTPResult(status: 200, body: Data("{}".utf8))]
+    XCTAssertNil(AuthApi(transport: http).nonce(origin: "http://mailbox.test/"))
+  }
+
+  func testParseNonceFromTheWorkerBodies() {
+    XCTAssertEqual("sealed-opaque", parseNonce(#"{"nonce":"sealed-opaque"}"#))
+    XCTAssertNil(parseNonce(#"{"error":"not_configured"}"#))
+  }
+
+  func testNonceNotConfiguredReturnsNil() {
+    let http = MockHTTP()
+    http.queue = [
+      HTTPResult(status: 503, body: Data(#"{"error":"not_configured"}"#.utf8))
+    ]
+    XCTAssertNil(AuthApi(transport: http).nonce(origin: "http://mailbox.test/"))
+  }
+
+  func testConfigDefaultsWhenTheBodyIsEmpty() throws {
+    let http = MockHTTP()
+    http.queue = [HTTPResult(status: 200, body: Data("{}".utf8))]
+    let got = try AuthApi(transport: http).config(origin: "http://mailbox.test/")
+    XCTAssertNil(got.mode)
+    XCTAssertEqual(false, got.google)
+  }
+
+  func testMeWithoutAgentsIsEmpty() throws {
+    let http = MockHTTP()
+    http.queue = [HTTPResult(status: 200, body: Data(#"{"sub":"u1"}"#.utf8))]
+    let got = try AuthApi(transport: http).me(origin: "http://mailbox.test/", token: "jwe")
+    XCTAssertNil(got.email)
+    XCTAssertEqual([], got.agents)
+  }
+
+  func testTokenPostsIdToken() throws {
+    let http = MockHTTP()
+    http.queue = [
+      HTTPResult(
+        status: 200,
+        body: Data(#"{"token":"jwe","sub":"u1","email":"ada@example.com","exp":9}"#.utf8))
+    ]
+    let got = try AuthApi(transport: http).token(
+      origin: "http://mailbox.test/", idToken: "id", nonce: "nonce")
+    XCTAssertEqual("jwe", got.token)
+    XCTAssertEqual("u1", got.sub)
+    XCTAssertEqual(9, got.exp)
+    XCTAssertEqual("POST", http.requests[0].httpMethod)
+    XCTAssertNil(http.requests[0].value(forHTTPHeaderField: "Cookie"))
+    let body = String(data: http.requests[0].httpBody ?? Data(), encoding: .utf8) ?? ""
+    XCTAssertTrue(body.contains("id_token"))
+  }
+
+  func testParseNativeSessionKeepsExpInSeconds() throws {
+    let raw =
+      #"{"token":"jwe","sub":"118212345678901234567","email":"ada@example.com","exp":1700000000}"#
+    let got = try parseNativeSession(raw)
+    XCTAssertEqual("jwe", got.token)
+    XCTAssertEqual("118212345678901234567", got.sub)
+    XCTAssertEqual("ada@example.com", got.email)
+    XCTAssertEqual(1_700_000_000, got.exp)
+  }
+
+  func testParseNotAllowed() {
+    let happy =
+      #"{"error":"not_allowed","sub":"118212345678901234567","email":"ada@example.com"}"#
+    XCTAssertEqual(
+      NotAllowed(sub: "118212345678901234567", email: "ada@example.com"),
+      parseNotAllowed(happy)
+    )
+    XCTAssertEqual(
+      NotAllowed(sub: "118212345678901234567", email: nil),
+      parseNotAllowed(
+        #"{"error":"not_allowed","sub":"118212345678901234567","email":null}"#)
+    )
+    XCTAssertNil(parseNotAllowed(#"{"error":"unauthorized"}"#))
+    XCTAssertNil(parseNotAllowed(#"{"error":"not_allowed","sub":""}"#))
+  }
+
+  func testTokenNotAllowedThrowsAuthError() {
+    let http = MockHTTP()
+    let raw =
+      #"{"error":"not_allowed","sub":"118212345678901234567","email":"ada@example.com"}"#
+    http.queue = [HTTPResult(status: 403, body: Data(raw.utf8))]
+    do {
+      _ = try AuthApi(transport: http).token(
+        origin: "http://mailbox.test/", idToken: "id", nonce: "nonce")
+      XCTFail("expected AuthError")
+    } catch let err as AuthError {
+      XCTAssertEqual(403, err.code)
+      XCTAssertEqual(
+        NotAllowed(sub: "118212345678901234567", email: "ada@example.com"),
+        parseNotAllowed(err.body)
+      )
+    } catch {
+      XCTFail("wrong error \(error)")
+    }
+  }
+
+  func testFailedStatusIsAuthError() {
+    let http = MockHTTP()
+    http.queue = [HTTPResult(status: 401, body: Data(#"{"error":"nope"}"#.utf8))]
+    do {
+      _ = try AuthApi(transport: http).config(origin: "http://mailbox.test/")
+      XCTFail("expected AuthError")
+    } catch let err as AuthError {
+      XCTAssertEqual(401, err.code)
+      XCTAssertTrue(err.body.contains("nope"))
+    } catch {
+      XCTFail("wrong error \(error)")
+    }
+  }
+
+  func testRoomThemeFromStateReadsTheIdAndTreatsNullAsCleared() {
+    XCTAssertEqual("rain", roomThemeFromState(#"{"theme":"rain","themes":[]}"#))
+    XCTAssertEqual("", roomThemeFromState(#"{"theme":"noir"}"#))
+    XCTAssertEqual("", roomThemeFromState(#"{"theme":null}"#))
+    XCTAssertEqual("", roomThemeFromState(#"{"theme":"nope"}"#))
+    XCTAssertEqual("", roomThemeFromState("nope"))
+  }
+
+  func testFetchReturnsTheRoomIdAndSendsBearer() {
+    let http = MockHTTP()
+    http.queue = [HTTPResult(status: 200, body: Data(#"{"theme":"siren","themes":[]}"#.utf8))]
+    XCTAssertEqual(
+      "siren",
+      ThemeApi(transport: http).fetch(origin: "http://mailbox.test/", slug: "kit", bearer: "jwe"))
+    XCTAssertEqual("/api/theme", http.requests[0].url?.path)
+    XCTAssertEqual("slug=kit", http.requests[0].url?.query)
+    XCTAssertEqual("Bearer jwe", http.requests[0].value(forHTTPHeaderField: "Authorization"))
+  }
+
+  func testFetchMissOrJunkIsClearedNotANetworkFail() {
+    let http = MockHTTP()
+    http.queue = [HTTPResult(status: 200, body: Data(#"{"theme":null}"#.utf8))]
+    XCTAssertEqual(
+      "", ThemeApi(transport: http).fetch(origin: "http://mailbox.test/", slug: "kit", bearer: ""))
+    XCTAssertNil(http.requests[0].value(forHTTPHeaderField: "Authorization"))
+  }
+
+  func testFetchHttpErrorIsNilSoALiveNoticeIsKept() {
+    let http = MockHTTP()
+    http.queue = [HTTPResult(status: 503, body: Data())]
+    XCTAssertNil(
+      ThemeApi(transport: http).fetch(origin: "http://mailbox.test/", slug: "kit", bearer: "jwe"))
+  }
+
+  func testRejectsTinyHugeAndNonJpeg() {
+    XCTAssertFalse(acceptJpeg(fakeJpeg(8)).ok)
+    if case .err(let detail) = acceptJpeg(fakeJpeg(8)) {
+      XCTAssertEqual("image too small", detail)
+    }
+    if case .err(let detail) = acceptJpeg(Data(count: avatarMaxBytes + 1)) {
+      XCTAssertEqual("image too large (max 5MB)", detail)
+    }
+    var png = Data(count: 64)
+    png[0] = 0x89
+    png[1] = 0x50
+    XCTAssertFalse(acceptJpeg(png).ok)
+    XCTAssertTrue(acceptJpeg(fakeJpeg()).ok)
+  }
+
+  func testPassthroughKeepsASmallJpeg() {
+    XCTAssertTrue(shouldPassthroughJpeg(type: "image/jpeg", size: 100, width: 64, height: 64))
+    XCTAssertFalse(shouldPassthroughJpeg(type: "image/png", size: 100, width: 64, height: 64))
+    XCTAssertFalse(shouldPassthroughJpeg(type: "image/jpeg", size: 100, width: 2000, height: 64))
+    XCTAssertFalse(
+      shouldPassthroughJpeg(
+        type: "image/jpeg", size: 2_000_000, width: 64, height: 64, maxBytes: 1_500_000)
+    )
+  }
+}
+
+func fakeJpeg(_ n: Int = 128) -> Data {
+  var b = Data(count: n)
+  b[0] = 0xFF
+  b[1] = 0xD8
+  b[2] = 0xFF
+  b[n - 1] = 0xD9
+  return b
+}

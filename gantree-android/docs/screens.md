@@ -1,0 +1,90 @@
+# Screens
+
+What the mouth looks like. Reshoot: `make shot` (JVM paint, no emulator).
+Debug APK also paints these scenes: tap the Dev chips, or
+
+```bash
+adb shell am start -n com.gantree.cab/.MainActivity --es sample thread
+```
+
+Samples are canned Ada/Kit turns — not a live agent. Release builds ignore
+`sample` extras. Boom is the default. Paper is the neutral light, Ink is
+high contrast, and Marquee is one mood. Settings groups the rest as Plain
+and Moods.
+
+Not shot yet: the header mic (left of the cog, only when the Worker
+publishes `voice`) and the hold-to-talk bar it swaps in for compose,
+the Settings → Access rows (microphone / location / notifications),
+Settings → Language (English / 日本語 / 中文 / Tiếng Việt, voice only),
+the avatar sheet (tap the header face: Copy / Share / Replace), and
+the bubble menu (hold any bubble: Copy text, then the emoji rows on a
+Kit bubble).
+`phone-settings` predates Access and Language, and still paints Theme /
+Font size / Photo size as chip rows; on the phone they are dropdowns
+(one field each, choices in a menu under it — `CabSettingsTest`).
+
+---
+
+## Phone
+
+<p align="center">
+  <img src="../assets/docs/phone-unsigned.png" alt="Unsigned cab" width="180">
+  &nbsp;
+  <img src="../assets/docs/phone-empty.png" alt="Empty live thread" width="180">
+  &nbsp;
+  <img src="../assets/docs/phone-thread.png" alt="Ada talking to Kit" width="180">
+  &nbsp;
+  <img src="../assets/docs/phone-stream.png" alt="Kit drafting a reply" width="180">
+</p>
+
+<p align="center">
+  <img src="../assets/docs/phone-photo.png" alt="Photo bubble" width="180">
+  &nbsp;
+  <img src="../assets/docs/phone-attach.png" alt="Attach menu" width="180">
+  &nbsp;
+  <img src="../assets/docs/phone-draft.png" alt="Photo sitting on the draft" width="180">
+  &nbsp;
+  <img src="../assets/docs/phone-emoji.png" alt="Emoji picker" width="180">
+</p>
+
+<p align="center">
+  <img src="../assets/docs/phone-thread-marquee.png" alt="Same thread in Marquee" width="180">
+  &nbsp;
+  <img src="../assets/docs/phone-thread-paper.png" alt="Same thread in Paper" width="180">
+  &nbsp;
+  <img src="../assets/docs/phone-settings.png" alt="Settings cog open" width="180">
+  &nbsp;
+  <img src="../assets/docs/phone-down.png" alt="Socket down" width="180">
+</p>
+
+## Android Auto
+
+ListTemplate + `ConversationItem` stand-in (DHU adds Reply / Play).
+Voice is Auto's host STT, not Assistant. The head unit keeps the car's
+day and night; a theme notice paints the phone only. An empty thread paints Kit's
+starter card ("Nothing said yet. Tap Reply and talk to Kit.") so
+Reply exists before the phone has sent anything; `auto-empty` predates
+that card.
+
+<p align="center">
+  <img src="../assets/docs/auto-empty.png" alt="Auto empty list" width="360">
+  &nbsp;
+  <img src="../assets/docs/auto-thread.png" alt="Auto thread" width="360">
+</p>
+
+| Shot | Sample | What it is |
+| --- | --- | --- |
+| `phone-unsigned` | `unsigned` | Google door. Avatar + cog. |
+| `phone-empty` | `empty` | Live, nothing said yet. |
+| `phone-thread` | `thread` | Ada ↔ Kit. Boom. |
+| `phone-stream` | `stream` | Draft bubble + `Live · typing…`. |
+| `phone-photo` | `photo` | Hatch photo in a you-bubble. |
+| `phone-down` | `down` | Socket down; local echo still `sending`. |
+| `phone-settings` | `empty` | Settings: origin, slug, theme catalog, font, photo size, follow Kit, backdrop, Test car voice. |
+| `phone-emoji` | `thread` | Emoji picker over compose. |
+| `phone-attach` | `thread` | Paperclip menu: photo, camera, commands, GPS, pin. |
+| `phone-draft` | `thread` | Staged photo on compose: thumbnail + Remove; Send carries caption + JPEG. |
+| `phone-thread-marquee` | `thread` | Same thread, Marquee (happy, dark). |
+| `phone-thread-paper` | `thread` | Same thread, Paper (daylight). |
+| `auto-empty` | `empty` | Auto list, empty. |
+| `auto-thread` | `thread` | Auto list, last six turns. |

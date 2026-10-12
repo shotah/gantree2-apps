@@ -1,0 +1,38 @@
+name: Helm
+options:
+  bundleIdPrefix: com.gantree
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+packages:
+  Mailbox:
+    path: ..
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: 9.2.0
+targets:
+  Helm:
+    type: application
+    platform: iOS
+    sources:
+      - Helm
+    info:
+      path: Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gantree.helm
+        PRODUCT_NAME: Helm
+        MARKETING_VERSION: "0.0.1"
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_FILE: Info.plist
+        CODE_SIGN_STYLE: Automatic
+    configFiles:
+      Debug: Helm.xcconfig
+      Release: Helm.xcconfig
+    dependencies:
+      - package: Mailbox
+        product: Mailbox
+      - package: GoogleSignIn
+        product: GoogleSignIn

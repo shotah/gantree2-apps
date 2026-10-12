@@ -1,0 +1,230 @@
+import Foundation
+
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
+public struct AuthConfig: Equatable {
+  public var mode: String?
+  public var google: Bool
+  public var voice: Bool
+
+  public init(mode: String?, google: Bool, voice: Bool = false) {
+    self.mode = mode
+    self.google = google
+    self.voice = voice
+  }
+}
+
+public struct Me: Equatable {
+  public var sub: String
+  public var email: String?
+  /// Agent slugs this human may talk to (`/api/auth/me` → `agents`).
+  public var agents: [String]
+
+  public init(sub: String, email: String?, agents: [String]) {
+    self.sub = sub
+    self.email = email
+    self.agents = agents
+  }
+}
+
+public struct NativeSession: Equatable {
+  public var token: String
+  public var sub: String
+  public var email: String?
+  public var exp: Int64
+
+  public init(token: String, sub: String, email: String?, exp: Int64) {
+    self.token = token
+    self.sub = sub
+    self.email = email
+    self.exp = exp
+  }
+}
+
+/// Google verified this caller; they are not on the gantree list. No session.
+public struct NotAllowed: Equatable {
+  public var sub: String
+  public var email: String?
+
+  public init(sub: String, email: String?) {
+    self.sub = sub
+    self.email = email
+  }
+}
+
+public struct HTTPResult {
+  public var status: Int
+  public var body: Data
+  public var headers: [String: String]
+
+  public init(status: Int, body: Data, headers: [String: String] = [:]) {
+    self.status = status
+    self.body = body
+    self.headers = headers
+  }
+}
+
+public protocol HTTPTransport {
+  func perform(_ request: URLRequest) throws -> HTTPResult
+}
+
+public struct AuthError: Error, Equatable {
+  public var code: Int
+  public var body: String
+
+  public init(code: Int, body: String) {
+    self.code = code
+    self.body = body
+  }
+}
+
+public func parseAuthConfig(_ raw: String) -> AuthConfig {
+  guard let o = JSON.object(raw) else {
+    return AuthConfig(mode: nil, google: false)
+  }
+  return AuthConfig(
+    mode: JSON.string(o, "mode"), google: JSON.bool(o, "google"), voice: JSON.bool(o, "voice"))
+}
+
+public func parseNonce(_ raw: String) -> String? {
+  JSON.object(raw).flatMap { JSON.string($0, "nonce") }
+}
+
+public func parseMe(_ raw: String) throws -> Me {
+  guard let o = JSON.object(raw), let subValue = JSON.string(o, "sub") else {
+    throw AuthError(code: 0, body: raw)
+  }
+  // `agents` is the field; `cranes` is the alias copy the Worker still writes
+  // until cutover. Read `agents` when present, even if empty.
+  let list = (o["agents"] as? [Any]) ?? (o["cranes"] as? [Any]) ?? []
+  var agents: [String] = []
+  for item in list {
+    guard let s = item as? String, let slug = parseSlug(s) else {
+      continue
+    }
+    agents.append(slug)
+  }
+  return Me(sub: subValue, email: JSON.string(o, "email"), agents: agents)
+}
+
+public func parseNativeSession(_ raw: String) throws -> NativeSession {
+  guard let o = JSON.object(raw),
+    let token = JSON.string(o, "token"),
+    let sub = JSON.string(o, "sub")
+  else {
+    throw AuthError(code: 0, body: raw)
+  }
+  let exp = jsonWholeNumber(o["exp"]) ?? 0
+  return NativeSession(token: token, sub: sub, email: JSON.string(o, "email"), exp: exp)
+}
+
+/// 403 body. Nil unless `error` is `not_allowed` and `sub` is non-empty.
+public func parseNotAllowed(_ raw: String) -> NotAllowed? {
+  guard let o = JSON.object(raw),
+    JSON.string(o, "error") == "not_allowed",
+    let sub = JSON.string(o, "sub")
+  else {
+    return nil
+  }
+  return NotAllowed(sub: sub, email: JSON.string(o, "email"))
+}
+
+public final class AuthApi {
+  private let transport: HTTPTransport
+
+  public init(transport: HTTPTransport) {
+    self.transport = transport
+  }
+
+  public func config(origin: String) throws -> AuthConfig {
+    let body = try get(httpOrigin(origin) + "/api/auth/config")
+    return parseAuthConfig(body)
+  }
+
+  /// Server-issued native nonce. Missing route, junk body, or empty value → nil.
+  /// The phone stops sign-in; a locally minted nonce is not accepted.
+  public func nonce(origin: String) -> String? {
+    do {
+      let body = try get(httpOrigin(origin) + "/api/auth/nonce")
+      return parseNonce(body)
+    } catch {
+      return nil
+    }
+  }
+
+  public func me(origin: String, token: String) throws -> Me {
+    let body = try get(httpOrigin(origin) + "/api/auth/me", token: token)
+    return try parseMe(body)
+  }
+
+  public func token(origin: String, idToken: String, nonce: String) throws -> NativeSession {
+    let payload = JSON.stringify(["id_token": idToken, "nonce": nonce])
+    let body = try post(httpOrigin(origin) + "/api/auth/token", json: payload)
+    return try parseNativeSession(body)
+  }
+
+  private func get(_ url: String, token: String? = nil) throws -> String {
+    var req = URLRequest(url: URL(string: url)!)
+    req.httpMethod = "GET"
+    if let token, !token.isEmpty {
+      req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    }
+    return try execute(req)
+  }
+
+  private func post(_ url: String, json: String) throws -> String {
+    var req = URLRequest(url: URL(string: url)!)
+    req.httpMethod = "POST"
+    req.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
+    req.httpBody = json.data(using: .utf8)
+    return try execute(req)
+  }
+
+  private func execute(_ req: URLRequest) throws -> String {
+    let res = try transport.perform(req)
+    let raw = String(data: res.body, encoding: .utf8) ?? ""
+    if res.status < 200 || res.status >= 300 {
+      throw AuthError(code: res.status, body: raw)
+    }
+    return raw
+  }
+}
+
+/// `{ "theme": "siren" | null, "themes": [...] }` — catalog cards are ignored.
+public func roomThemeFromState(_ raw: String) -> String {
+  guard let o = JSON.object(raw) else {
+    return ""
+  }
+  if !JSON.has(o, "theme") || JSON.isNull(o, "theme") {
+    return ""
+  }
+  return knownTheme(o["theme"] as? String) ?? ""
+}
+
+public final class ThemeApi {
+  private let transport: HTTPTransport
+
+  public init(transport: HTTPTransport) {
+    self.transport = transport
+  }
+
+  /// GET `/api/theme?slug=`. Known id, empty when the room has none, nil on HTTP fail.
+  public func fetch(origin: String, slug: String, bearer: String) -> String? {
+    var req = URLRequest(url: URL(string: themeUrl(origin, slug: slug))!)
+    req.httpMethod = "GET"
+    if !bearer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      req.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization")
+    }
+    do {
+      let res = try transport.perform(req)
+      if res.status < 200 || res.status >= 300 {
+        return nil
+      }
+      return roomThemeFromState(String(data: res.body, encoding: .utf8) ?? "")
+    } catch {
+      return nil
+    }
+  }
+}

@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# Pre-commit: both apps' tests. Lint and coverage are pre-push.
+set -eu
+
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+
+echo "==> Tests"
+make test
+
+echo "Pre-commit checks passed."

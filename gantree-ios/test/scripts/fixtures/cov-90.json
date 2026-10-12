@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "files": [
+        {
+          "filename": "/src/Sources/Mailbox/Wire.swift",
+          "summary": { "lines": { "count": 20, "covered": 18 } }
+        },
+        {
+          "filename": "/src/Sources/Mailbox/MailboxUrl.swift",
+          "summary": { "lines": { "count": 10, "covered": 9 } }
+        },
+        {
+          "filename": "/src/app/Helm/HelmApp.swift",
+          "summary": { "lines": { "count": 100, "covered": 1 } }
+        }
+      ]
+    }
+  ]
+}

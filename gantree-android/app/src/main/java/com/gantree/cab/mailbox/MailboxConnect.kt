@@ -1,0 +1,171 @@
+package com.gantree.cab.mailbox
+
+import java.net.URI
+
+/** Why the phone socket must not open yet. Null means go ahead. */
+fun mailboxConnectError(
+  slug: String,
+  bearer: String,
+  sessionExpired: Boolean = false,
+): String? {
+  if (parseSlug(slug) == null) {
+    return "Talking to needs an agent slug like kit."
+  }
+  if (sessionExpired) {
+    return "Google session expired — sign in again."
+  }
+  if (bearer.isBlank()) {
+    return "No Google session or phone secret yet — the mailbox socket cannot open."
+  }
+  return null
+}
+
+/** JWT `exp` is unix seconds. Zero means unknown — do not lock the phone out. */
+fun sessionExpired(expEpochSec: Long, nowEpochSec: Long): Boolean =
+  expEpochSec > 0L && nowEpochSec >= expEpochSec
+
+/** Prefer the Google session; never fall back to the spike after it expires. */
+fun liveBearer(session: String, sessionExp: Long, spike: String, nowEpochSec: Long): String {
+  if (session.isNotBlank()) {
+    return if (sessionExpired(sessionExp, nowEpochSec)) "" else session
+  }
+  return spike
+}
+
+/**
+ * Emulator loopback may persist the lab secret. A debug APK on a real
+ * phone must not write it to disk. Google session: never keep the spike.
+ */
+fun persistSpikeAllowed(origin: String, hasGoogleSession: Boolean, debugBuild: Boolean): Boolean {
+  if (hasGoogleSession) {
+    return false
+  }
+  if (!debugBuild) {
+    return true
+  }
+  return loopbackMailboxHost(origin)
+}
+
+fun loopbackMailboxHost(origin: String): Boolean {
+  val raw = normalizeMailboxOrigin(origin)
+  if (raw.isEmpty()) {
+    return false
+  }
+  val host = try {
+    URI(raw).host?.lowercase()
+  } catch (_: Exception) {
+    null
+  } ?: return false
+  return host == "10.0.2.2" || host == "localhost" || host == "127.0.0.1"
+}
+
+fun mailboxSocketHint(code: Int?, detail: String?): String {
+  val bit = detail?.trim().orEmpty().ifEmpty { "retrying" }
+  return when (code) {
+    401, 403 ->
+      "Mailbox refused the socket (HTTP $code). Google worked, but this agent’s room list may not include you."
+    404 -> "Mailbox has no socket for this agent name (HTTP 404)."
+    null -> "Mailbox socket down — ${bit.take(160)}"
+    else -> "Mailbox socket down (HTTP $code) — ${bit.take(120)}"
+  }
+}
+
+fun mailboxSignedInHint(email: String, agents: List<String>): String {
+  val who = email.ifBlank { "you" }
+  if (agents.isEmpty()) {
+    return "Google worked ($who), but gantree listed no agents for you. The socket stays offline until you’re on the room list."
+  }
+  return "Signed in as $who"
+}
+
+/** Google said yes; this person is not on the gantree list. No session. */
+fun mailboxNotAllowedHint(email: String): String {
+  val who = email.trim()
+  val head = if (who.isEmpty()) {
+    "Google worked, but you’re not on the gantree list yet."
+  } else {
+    "Google worked ($who), but you’re not on the gantree list yet."
+  }
+  return "$head Copy your id below and send it to your gantree admin."
+}
+
+/**
+ * What sign-in shows for a failed auth call. 403 `not_allowed` is the
+ * stranger ([AuthFailure.notAllowed]); that response carries no session.
+ */
+data class AuthFailure(
+  val hint: String,
+  val notAllowed: NotAllowed? = null,
+)
+
+fun describeAuthError(code: Int, body: String): AuthFailure {
+  if (code == 403) {
+    val who = parseNotAllowed(body)
+    if (who != null) {
+      return AuthFailure(mailboxNotAllowedHint(who.email.orEmpty()), who)
+    }
+  }
+  val hint = when (code) {
+    401 -> {
+      val why = parseAuthError(body)
+      if (why.isNullOrEmpty()) {
+        "Sign-in was refused — try again."
+      } else {
+        "Sign-in was refused ($why) — try again."
+      }
+    }
+    503 -> "gantree has no Google login configured yet."
+    else -> "Sign-in failed (HTTP $code)."
+  }
+  return AuthFailure(hint)
+}
+
+/** Email + Google sub, what the gantree admin pastes. Gantree copies the same two lines. */
+fun allowlistCopy(email: String, sub: String): String =
+  listOf(email, sub).map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
+
+fun mailboxTimeoutHint(): String =
+  "Mailbox timed out — Android ended the background socket. Open Cab to listen again."
+
+/** No second handshake within this of the last open — a resume right after launch is not a gap. */
+const val SWEEP_MIN_GAP_MS = 10_000L
+
+/** While a thread is on some screen, sweep the mailbox this often. */
+const val SWEEP_EVERY_MS = 2 * 60_000L
+
+/** Normal closure. What a sweep sends on the socket it retires, so the mailbox drops it at once. */
+const val SWEEP_RETIRE_CODE = 1000
+
+/**
+ * A quiet sweep is worth its handshake only while someone is looking at the
+ * thread. The mailbox does not push what another mouth of yours sent; a
+ * connect flush is how it comes over, so we take one on a slow tick.
+ */
+fun watchingThread(phoneResumed: Boolean, carThreadVisible: Boolean): Boolean =
+  phoneResumed || carThreadVisible
+
+/** HTTP 401/403/404 are terminal; keep retrying transport failures. */
+fun mailboxShouldRetry(httpCode: Int?): Boolean = when (httpCode) {
+  401, 403, 404, 4401 -> false
+  else -> true
+}
+
+/** Handshake 401: this JWE is no good. Do not drop on 403 (wrong room, same human). */
+fun mailboxHttpDropsSession(httpCode: Int?): Boolean = httpCode == 401
+
+/**
+ * Mailbox close `4401` is "this credential may not talk" — yanked `sub`,
+ * expired session on the next frame, later an `iat` floor. Drop the JWE.
+ */
+const val MAILBOX_CLOSE_UNAUTHORIZED = 4401
+
+fun mailboxCloseDropsAuth(code: Int): Boolean = code == MAILBOX_CLOSE_UNAUTHORIZED
+
+fun mailboxAuthLostHint(): String =
+  "Mailbox closed the session — sign in again."
+
+/** 2s, 4s, 8s, 16s, 32s, then cap at 60s. */
+fun mailboxRetryDelayMs(attempt: Int): Long {
+  val shift = attempt.coerceIn(0, 5)
+  return (2_000L shl shift).coerceAtMost(60_000L)
+}
