@@ -63,7 +63,7 @@ letting another app read the thread are the failures that matter.
 ## Medium
 
 - [ ] **Wrap credentials at rest.** High. `CabPrefs` writes the session JWE, `CHAT_SECRET` and email to plain `shared_prefs/cab.xml`. Backup is off; root, a debug `run-as`, or a dump still reads both. Tink `AndroidKeysetManager` (what `EncryptedSharedPreferences` used; `androidx.security:security-crypto` is deprecated). Partial now: Google sign-in clears the spike; debug persists the spike only for `10.0.2.2` / `localhost` / `127.0.0.1`.
-- [ ] **`gradle/verification-metadata.xml`.** Medium. Generate with `./gradlew --write-verification-metadata sha256` and commit. Wrapper jar is already validated by `setup-gradle@v4`.
+- [ ] **`gradle/verification-metadata.xml`.** Medium. Generate with `./gradlew --write-verification-metadata sha256` and commit. The wrapper jar is fetched by `scripts/wrapper-jar.sh` (pinned sha256) and checked by `setup-gradle`.
 - [ ] **Release minify + shrink.** Low. `isMinifyEnabled = true`, `isShrinkResources = true`. Faster `adb install` of the 51 MB APK; strips unused code and symbol names. Keep `proguard-rules.pro` for OkHttp/Compose. Debug stays unminified. Not a release-job gate.
 - [ ] **ktlint + `.editorconfig`.** `indent_size = 2`, `max_line_length = 120`, `ktlint_code_style = intellij_idea`. Plugin `org.jlleitschuh.gradle.ktlint` (or detekt with formatting). Run in pre-commit (sub-second warm). Drop `kotlin.code.style=official` or align to 4-space.
 - [ ] **Walk sibling inbound.** Worker fan is shipped (`siblingPhoneTag` → `sub:<userId>` except the sender). Cab already paints `inbound` as you and skips HUN. Quiet sweep (`MailboxClient.sweep`) stays. Walk both mouths on a deployed origin: [sibling_phones.md](sibling_phones.md).

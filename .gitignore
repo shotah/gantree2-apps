@@ -7,6 +7,8 @@ gantree-android/**/.idea/
 gantree-android/**/*.iml
 gantree-android/**/build/
 gantree-android/**/local.properties
+# Fetched by gantree-android/scripts/wrapper-jar.sh (Scorecard binary-artifacts).
+gantree-android/gradle/wrapper/gradle-wrapper.jar
 gantree-android/**/captures/
 gantree-android/**/*.apk
 gantree-android/**/*.ap_

@@ -98,6 +98,7 @@ test-scripts: ## Script tests (no Android SDK)
 	./test/scripts/cab-bake.test.sh
 	./test/scripts/apk-sha1.test.sh
 	./test/scripts/launcher-icon.test.sh
+	./test/scripts/wrapper-jar.test.sh
 
 .PHONY: test-app
 test-app: ensure-sdk ## JVM unit tests
