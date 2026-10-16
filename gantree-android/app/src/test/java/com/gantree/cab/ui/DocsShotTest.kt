@@ -1,11 +1,17 @@
 package com.gantree.cab.ui
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
 class DocsShotTest {
+  @Test
+  fun defaultAvatarMarkLoadsFromMipmap() {
+    assertNotNull(sampleDefaultAvatarMark())
+  }
+
   @Test
   fun phoneThreadIsPhoneSized() {
     val img = renderPhone("thread")

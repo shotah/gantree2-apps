@@ -84,6 +84,9 @@ private const val HEADER_FACE_NUDGE_X = -2f
 private const val HEADER_FACE_NUDGE_Y = -4f
 private const val HEADER_PAD = 12f
 private const val HINT_X = 96
+/** Tree anchor in shared brand launcher PNGs (same layout at every dpi). */
+private const val MARK_ANCHOR_X_FRAC = 80f / 192f
+private const val MARK_ANCHOR_Y_FRAC = 100f / 192f
 
 val DOCS_SHOT_NAMES = listOf(
   "phone-unsigned",
@@ -322,20 +325,33 @@ private fun paintHeader(g: Graphics2D, ink: ShotInk, font: Font, slug: String, u
 }
 
 private fun paintAvatar(g: Graphics2D, ink: ShotInk, x: Float, y: Float, size: Float, ring: Boolean = false) {
-  val face = sampleFace()
+  val face = sampleDefaultAvatarMark()
   val clip = g.clip
   g.clip = Ellipse2D.Float(x, y, size, size)
+  g.color = ink.track
+  g.fill(Ellipse2D.Float(x, y, size, size))
   if (face != null) {
-    val scale = maxOf(size / face.width, size / face.height)
-    val dw = face.width * scale
-    val dh = face.height * scale
+    val inset = face.width * (22f / 108f)
+    val srcW = (face.width - inset * 2).coerceAtLeast(1f)
+    val srcH = (face.height - inset * 2).coerceAtLeast(1f)
+    val scale = maxOf(size / srcW, size / srcH)
+    val anchorX = face.width * MARK_ANCHOR_X_FRAC
+    val anchorY = face.height * MARK_ANCHOR_Y_FRAC
+    val dstCx = x + size / 2f
+    val dstCy = y + size / 2f
+    val dstLeft = dstCx - anchorX * scale
+    val dstTop = dstCy - anchorY * scale
     g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
     g.drawImage(
       face,
-      (x + (size - dw) / 2f).toInt(),
-      (y + (size - dh) / 2f).toInt(),
-      dw.toInt().coerceAtLeast(1),
-      dh.toInt().coerceAtLeast(1),
+      dstLeft.toInt(),
+      dstTop.toInt(),
+      (dstLeft + face.width * scale).toInt(),
+      (dstTop + face.height * scale).toInt(),
+      0,
+      0,
+      face.width,
+      face.height,
       null,
     )
   } else {
@@ -609,7 +625,16 @@ private fun paintHatchPhoto(g: Graphics2D, ink: ShotInk, x: Float, y: Float, w: 
 
 private fun sampleHatch(): BufferedImage? = sampleNodpi("sample_hatch.jpg")
 
-private fun sampleFace(): BufferedImage? = sampleNodpi("kit_face.jpg")
+internal fun sampleDefaultAvatarMark(): BufferedImage? = sampleMipmap("ic_launcher.png")
+
+private fun sampleMipmap(name: String): BufferedImage? {
+  val file = listOf(
+    File("app/src/main/res/mipmap-xxxhdpi/$name"),
+    File("src/main/res/mipmap-xxxhdpi/$name"),
+    File("../shared/brand/android/mipmap-xxxhdpi/$name"),
+  ).firstOrNull { it.isFile } ?: return null
+  return ImageIO.read(file)
+}
 
 private fun sampleNodpi(name: String): BufferedImage? {
   val file = listOf(

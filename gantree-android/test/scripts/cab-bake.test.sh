@@ -32,6 +32,18 @@ grep -q 'CAB_GOOGLE_WEB_CLIENT_ID' "$repo/.github/workflows/release.yml" || {
   echo "FAIL: release.yml should pass CAB_GOOGLE_WEB_CLIENT_ID" >&2
   exit 1
 }
+grep -q 'Require baked mailbox config' "$repo/.github/workflows/release.yml" || {
+  echo "FAIL: release.yml should fail when CAB bake secrets are empty" >&2
+  exit 1
+}
+grep -q 'CAB_MAILBOX_ORIGIN is required' "$repo/.github/workflows/release.yml" || {
+  echo "FAIL: release.yml should fail when CAB_MAILBOX_ORIGIN is empty" >&2
+  exit 1
+}
+grep -q 'CAB_GOOGLE_WEB_CLIENT_ID is required' "$repo/.github/workflows/release.yml" || {
+  echo "FAIL: release.yml should fail when CAB_GOOGLE_WEB_CLIENT_ID is empty" >&2
+  exit 1
+}
 grep -q 'CAB_MAILBOX_ORIGIN' "$root/app/build.gradle.kts" || {
   echo "FAIL: build.gradle.kts should read CAB_MAILBOX_ORIGIN" >&2
   exit 1

@@ -49,6 +49,23 @@ jobs:
             echo "CAB_STORE_FILE=${RUNNER_TEMP}/gantree-android.jks" >> "$GITHUB_ENV"
           fi
 
+      # Gradle defaults mailbox to the emulator loopback and leaves Google Sign-In
+      # blank — fine for debug, not for a sideload release APK.
+      - name: Require baked mailbox config
+        env:
+          CAB_MAILBOX_ORIGIN: ${{ secrets.CAB_MAILBOX_ORIGIN || vars.CAB_MAILBOX_ORIGIN }}
+          CAB_GOOGLE_WEB_CLIENT_ID: ${{ secrets.CAB_GOOGLE_WEB_CLIENT_ID || vars.CAB_GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CAB_MAILBOX_ORIGIN}" ]]; then
+            echo "::error::CAB_MAILBOX_ORIGIN is required for release APKs (Actions secret or variable)."
+            exit 1
+          fi
+          if [[ -z "${CAB_GOOGLE_WEB_CLIENT_ID}" ]]; then
+            echo "::error::CAB_GOOGLE_WEB_CLIENT_ID is required for release APKs (Actions secret or variable)."
+            exit 1
+          fi
+
       - name: Assemble release APK
         env:
           CAB_STORE_PASSWORD: ${{ secrets.CAB_STORE_PASSWORD }}

@@ -201,10 +201,10 @@ struct KitFace: View {
       .overlay {
         if let jpeg, let img = helmImage(jpeg) {
           img.resizable().scaledToFill()
-        } else {
-          Text(rev > 0 ? "" : "K")
-            .font(.title2.weight(.semibold))
-            .foregroundStyle(Color(rgb: colors.mark))
+        } else if rev == 0 {
+          Image("KitFace")
+            .resizable()
+            .scaledToFill()
         }
       }
       .overlay(
