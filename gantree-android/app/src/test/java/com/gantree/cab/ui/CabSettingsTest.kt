@@ -7,7 +7,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
 import com.gantree.cab.mailbox.DEFAULT_FONT
 import com.gantree.cab.mailbox.DEFAULT_LANG
 import com.gantree.cab.mailbox.DEFAULT_PHOTO_SIZE
@@ -35,12 +37,14 @@ class CabSettingsTest {
     email: String = "",
     agents: List<String> = emptyList(),
     sub: String = "",
+    slug: String = "kit",
+    onSlug: (String) -> Unit = {},
   ) {
     compose.setContent {
       CabTheme(themeId = DEFAULT_THEME, fontId = DEFAULT_FONT) {
         CabSettings(
           origin = "https://gantree.example",
-          slug = "kit",
+          slug = slug,
           spike = "",
           email = email,
           googleReady = false,
@@ -49,7 +53,7 @@ class CabSettingsTest {
           themeId = DEFAULT_THEME,
           fontId = DEFAULT_FONT,
           onOrigin = {},
-          onSlug = {},
+          onSlug = onSlug,
           onSpike = {},
           onTheme = { picked += "theme" to it },
           onFont = { picked += "font" to it },
@@ -142,6 +146,23 @@ class CabSettingsTest {
     compose.onNodeWithContentDescription("google sub").performScrollTo().assertIsDisplayed()
     compose.onNodeWithText("Copy").performScrollTo().performClick()
     compose.onNodeWithText("Copied").performScrollTo().assertIsDisplayed()
+  }
+
+  @Test
+  fun talkingToCommitsTheSlugOnDone() {
+    val slugs = mutableListOf<String>()
+    settings(slug = "evie", onSlug = { slugs += it })
+    compose.onNodeWithText("evie").performScrollTo().performTextReplacement("tim")
+    compose.onNodeWithText("tim").performImeAction()
+    assertEquals(listOf("tim"), slugs)
+  }
+
+  @Test
+  fun agentChipSelectsThatSlug() {
+    val slugs = mutableListOf<String>()
+    settings(slug = "evie", agents = listOf("evie", "tim"), onSlug = { slugs += it })
+    compose.onNodeWithText("Tim").performScrollTo().performClick()
+    assertEquals(listOf("tim"), slugs)
   }
 
   @Test

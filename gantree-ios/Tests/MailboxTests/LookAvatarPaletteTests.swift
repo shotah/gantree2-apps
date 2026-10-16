@@ -121,26 +121,26 @@ final class LookAvatarPaletteTests: XCTestCase {
 
   func testAvatarUrlPinsARev() {
     XCTAssertEqual(
-      "https://example.workers.dev/api/avatar?slug=kit",
+      "https://example.workers.dev/api/chat/avatar?slug=kit",
       avatarUrl("https://example.workers.dev/", slug: "kit")
     )
     XCTAssertEqual(
-      "https://example.workers.dev/api/avatar?slug=kit&v=3",
+      "https://example.workers.dev/api/chat/avatar?slug=kit&v=3",
       avatarUrl("https://example.workers.dev/", slug: "kit", rev: 3)
     )
   }
 
   func testBackdropAndThemeUrlsMatchTheWorker() {
     XCTAssertEqual(
-      "https://example.workers.dev/api/backdrop?slug=kit",
+      "https://example.workers.dev/api/chat/backdrop?slug=kit",
       backdropUrl("https://example.workers.dev/", slug: "kit")
     )
     XCTAssertEqual(
-      "https://example.workers.dev/api/backdrop?slug=kit&v=9",
+      "https://example.workers.dev/api/chat/backdrop?slug=kit&v=9",
       backdropUrl("https://example.workers.dev/", slug: "kit", rev: 9)
     )
     XCTAssertEqual(
-      "https://example.workers.dev/api/theme?slug=kit",
+      "https://example.workers.dev/api/chat/theme?slug=kit",
       themeUrl("https://example.workers.dev/", slug: "kit")
     )
   }

@@ -8,7 +8,7 @@ import java.io.File
 
 class DocsShotTest {
   @Test
-  fun defaultAvatarMarkLoadsFromMipmap() {
+  fun defaultAvatarMarkLoadsTheBrandPng() {
     assertNotNull(sampleDefaultAvatarMark())
   }
 

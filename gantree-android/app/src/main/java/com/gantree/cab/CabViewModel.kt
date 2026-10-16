@@ -30,6 +30,7 @@ import com.gantree.cab.mailbox.describeAuthError
 import com.gantree.cab.mailbox.googleSignInHint
 import com.gantree.cab.mailbox.mailboxSignedInHint
 import com.gantree.cab.mailbox.normalizeMailboxOrigin
+import com.gantree.cab.mailbox.BACKDROP_PATH
 import com.gantree.cab.mailbox.parseLang
 import com.gantree.cab.mailbox.parseSlug
 import com.gantree.cab.mailbox.fetchedRoomTheme
@@ -181,9 +182,9 @@ class CabViewModel(private val app: CabApp) : ViewModel() {
           return@collectLatest
         }
         if (_backdrop.value == null) {
-          paintBackdrop(withContext(Dispatchers.IO) { app.avatar.cached(origin, room, "/api/backdrop") })
+          paintBackdrop(withContext(Dispatchers.IO) { app.avatar.cached(origin, room, BACKDROP_PATH) })
         }
-        paintBackdrop(app.avatar.fetch(origin, room, app.prefs.bearer, rev, "/api/backdrop"))
+        paintBackdrop(app.avatar.fetch(origin, room, app.prefs.bearer, rev, BACKDROP_PATH))
       }
     }
     viewModelScope.launch {
@@ -241,15 +242,33 @@ class CabViewModel(private val app: CabApp) : ViewModel() {
   fun setOrigin(v: String) { _origin.value = v }
   fun setSpike(v: String) { _spike.value = v }
 
+  /**
+   * A chip, or Talking to once that field is committed. Saves the slug, drops
+   * the previous room's thread and paint, and redials `/ws/<slug>?role=phone`
+   * on the same bearer. The same room does not reconnect.
+   */
   fun setSlug(v: String) {
-    _slug.value = v
+    val room = parseSlug(v) ?: return
+    if (room == app.prefs.slug) {
+      _slug.value = room
+      return
+    }
+    // Clear before the slug emit. The theme collector snapshots the id, then
+    // a later clear would make the new room's GET look stale and get dropped.
     _face.value = null
+    _backdrop.value = null
     app.face = null
     app.mouth.setAvatarRev(0)
     app.mouth.setBackdropRev(0)
     app.mouth.setRoomTheme("")
     app.mouth.setFaceHint("")
     _stagedPhoto.value = null
+    app.prefs.slug = room
+    _slug.value = room
+    app.openThread()
+    if (app.prefs.signedIn) {
+      MailboxService.start(app)
+    }
   }
 
   fun setTheme(v: String) {

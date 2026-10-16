@@ -701,7 +701,7 @@ final class HelmModel: ObservableObject {
     let api = blobs
     faceJpeg = api?.cached(origin: origin, slug: slug)
     if backdropOn {
-      backdropJpeg = api?.cached(origin: origin, slug: slug, path: "/api/backdrop")
+      backdropJpeg = api?.cached(origin: origin, slug: slug, path: backdropPath)
     } else {
       backdropJpeg = nil
     }
@@ -716,7 +716,7 @@ final class HelmModel: ObservableObject {
       let back =
         wantBack
         ? api?.fetch(
-          origin: origin, slug: slug, bearer: bearer, rev: backRev, path: "/api/backdrop")
+          origin: origin, slug: slug, bearer: bearer, rev: backRev, path: backdropPath)
         : nil
       DispatchQueue.main.async {
         self.faceJpeg = face

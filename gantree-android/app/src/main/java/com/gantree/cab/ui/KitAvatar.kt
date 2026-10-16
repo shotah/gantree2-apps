@@ -68,7 +68,7 @@ fun KitAvatar(
       Image(
         painter = painterResource(R.drawable.kit_face),
         contentDescription = null,
-        contentScale = ContentScale.Crop,
+        contentScale = ContentScale.Fit,
         modifier = paint,
       )
     }

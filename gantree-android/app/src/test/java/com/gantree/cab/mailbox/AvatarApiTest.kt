@@ -40,7 +40,7 @@ class AvatarApiTest {
     val got = runBlocking { api.fetch(origin, "kit", "jwe", 3) }
     assertTrue(got.contentEquals(jpeg))
     val req = server.takeRequest()
-    assertEquals("/api/avatar?slug=kit&v=3", req.path)
+    assertEquals("/api/chat/avatar?slug=kit&v=3", req.path)
     assertEquals("Bearer jwe", req.getHeader("Authorization"))
   }
 
@@ -48,9 +48,9 @@ class AvatarApiTest {
   fun fetchBackdropUsesTheBackdropPath() {
     val jpeg = fakeJpeg()
     server.enqueue(MockResponse().setBody(okio.Buffer().write(jpeg)))
-    val got = runBlocking { api.fetch(server.url("/").toString(), "kit", "jwe", 4, "/api/backdrop") }
+    val got = runBlocking { api.fetch(server.url("/").toString(), "kit", "jwe", 4, "/api/chat/backdrop") }
     assertTrue(got.contentEquals(jpeg))
-    assertEquals("/api/backdrop?slug=kit&v=4", server.takeRequest().path)
+    assertEquals("/api/chat/backdrop?slug=kit&v=4", server.takeRequest().path)
   }
 
   @Test
@@ -71,7 +71,7 @@ class AvatarApiTest {
     runBlocking { api.fetch(origin, "kit", "jwe", 1) }
     assertNull(server.takeRequest().getHeader("If-None-Match"))
     assertTrue(jpeg.contentEquals(api.cached(origin, "kit")))
-    val stored = cache.read(blobCacheKey(origin, "kit", "/api/avatar"))!!
+    val stored = cache.read(blobCacheKey(origin, "kit", "/api/chat/avatar"))!!
     assertTrue(jpeg.contentEquals(stored.bytes))
     assertEquals(7, stored.rev)
     assertNull(api.cached(origin, "kit", "/api/backdrop"))
@@ -89,7 +89,7 @@ class AvatarApiTest {
     server.enqueue(MockResponse().setResponseCode(304).setHeader("X-Pendant-Rev", "7").setHeader("ETag", "\"7\""))
     assertTrue(jpeg.contentEquals(runBlocking { api.fetch(origin, "kit", "jwe", 0) }))
     assertEquals("\"7\"", server.takeRequest().getHeader("If-None-Match"))
-    assertEquals(7, cache.rev(blobCacheKey(origin, "kit", "/api/avatar")))
+    assertEquals(7, cache.rev(blobCacheKey(origin, "kit", "/api/chat/avatar")))
     // A new rev is a 200 with bytes; the next GET names it.
     val next = fakeJpeg(200)
     server.enqueue(MockResponse().setBody(Buffer().write(next)).setHeader("X-Pendant-Rev", "8"))
@@ -128,7 +128,7 @@ class AvatarApiTest {
     assertTrue(jpeg.contentEquals(runBlocking { api.fetch(origin, "kit", "expired", 1) }))
     // Offline: nothing listens on port 1.
     val dead = "http://127.0.0.1:1"
-    cache.write(blobCacheKey(dead, "kit", "/api/avatar"), CachedBlob(2, jpeg))
+    cache.write(blobCacheKey(dead, "kit", "/api/chat/avatar"), CachedBlob(2, jpeg))
     assertTrue(jpeg.contentEquals(runBlocking { api.fetch(dead, "kit", "jwe", 1) }))
   }
 

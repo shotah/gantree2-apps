@@ -9,6 +9,8 @@ import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -111,6 +113,69 @@ class CabViewModelTest {
     assertEquals("", app.prefs.session)
     assertEquals("", vm.sub.value)
     assertEquals("gantree has no Google login configured yet.", vm.authHint.value)
+    assertFalse(mailboxStarted())
+  }
+
+  @Test
+  fun selectingAnotherAgentSavesTheSlugAndLeavesTheOldRoom() {
+    app.prefs.slug = "evie"
+    app.prefs.session = "jwe"
+    app.prefs.email = "ada@example.com"
+    app.openThread()
+    app.mouth.add(ChatLine(id = "evie-line", fromYou = false, text = "still evie", kind = "reply"))
+    app.mouth.setRoomTheme("paper")
+    app.mouth.setAvatarRev(4)
+    app.mouth.setBackdropRev(5)
+    app.mouth.setFaceHint("evie face")
+    app.face = byteArrayOf(9, 9, 9)
+    Shadows.shadowOf(app).clearStartedServices()
+
+    vm.setSlug("tim")
+
+    assertEquals("tim", vm.slug.value)
+    assertEquals("tim", app.prefs.slug)
+    assertEquals("jwe", app.prefs.session)
+    assertTrue(app.mouth.lines.value.none { it.id == "evie-line" })
+    assertEquals("", app.mouth.roomTheme.value)
+    assertEquals(0, app.mouth.avatarRev.value)
+    assertEquals(0, app.mouth.backdropRev.value)
+    assertEquals("", app.mouth.faceHint.value)
+    assertNull(app.face)
+    assertNull(vm.face.value)
+    assertNull(vm.backdrop.value)
+    assertTrue(mailboxStarted())
+  }
+
+  @Test
+  fun selectingTheCurrentAgentDoesNotRedial() {
+    app.prefs.slug = "evie"
+    app.prefs.session = "jwe"
+    app.openThread()
+    app.mouth.add(ChatLine(id = "evie-line", fromYou = false, text = "still evie", kind = "reply"))
+    app.mouth.setRoomTheme("paper")
+    Shadows.shadowOf(app).clearStartedServices()
+
+    vm.setSlug("evie")
+
+    assertEquals("evie", vm.slug.value)
+    assertEquals("evie", app.prefs.slug)
+    assertEquals("evie-line", app.mouth.lines.value.single().id)
+    assertEquals("paper", app.mouth.roomTheme.value)
+    assertFalse(mailboxStarted())
+  }
+
+  @Test
+  fun invalidSlugDoesNotLeaveTheRoom() {
+    app.prefs.slug = "evie"
+    app.prefs.session = "jwe"
+    app.openThread()
+    app.mouth.add(ChatLine(id = "evie-line", fromYou = false, text = "still evie", kind = "reply"))
+    Shadows.shadowOf(app).clearStartedServices()
+
+    vm.setSlug("..")
+
+    assertEquals("evie", app.prefs.slug)
+    assertEquals("evie-line", app.mouth.lines.value.single().id)
     assertFalse(mailboxStarted())
   }
 

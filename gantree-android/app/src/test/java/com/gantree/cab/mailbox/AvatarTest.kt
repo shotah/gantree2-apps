@@ -48,11 +48,11 @@ class AvatarTest {
   @Test
   fun avatarUrlPinsARev() {
     assertEquals(
-      "https://example.workers.dev/api/avatar?slug=kit",
+      "https://example.workers.dev/api/chat/avatar?slug=kit",
       avatarUrl("https://example.workers.dev/", "kit"),
     )
     assertEquals(
-      "https://example.workers.dev/api/avatar?slug=kit&v=3",
+      "https://example.workers.dev/api/chat/avatar?slug=kit&v=3",
       avatarUrl("https://example.workers.dev/", "kit", 3),
     )
   }
@@ -60,15 +60,15 @@ class AvatarTest {
   @Test
   fun backdropAndThemeUrlsMatchTheWorker() {
     assertEquals(
-      "https://example.workers.dev/api/backdrop?slug=kit",
+      "https://example.workers.dev/api/chat/backdrop?slug=kit",
       backdropUrl("https://example.workers.dev/", "kit"),
     )
     assertEquals(
-      "https://example.workers.dev/api/backdrop?slug=kit&v=9",
+      "https://example.workers.dev/api/chat/backdrop?slug=kit&v=9",
       backdropUrl("https://example.workers.dev/", "kit", 9),
     )
     assertEquals(
-      "https://example.workers.dev/api/theme?slug=kit",
+      "https://example.workers.dev/api/chat/theme?slug=kit",
       themeUrl("https://example.workers.dev/", "kit"),
     )
   }

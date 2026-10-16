@@ -233,7 +233,7 @@ final class AuthThemeJpegTests: XCTestCase {
     XCTAssertEqual(
       "siren",
       ThemeApi(transport: http).fetch(origin: "http://mailbox.test/", slug: "kit", bearer: "jwe"))
-    XCTAssertEqual("/api/theme", http.requests[0].url?.path)
+    XCTAssertEqual("/api/chat/theme", http.requests[0].url?.path)
     XCTAssertEqual("slug=kit", http.requests[0].url?.query)
     XCTAssertEqual("Bearer jwe", http.requests[0].value(forHTTPHeaderField: "Authorization"))
   }

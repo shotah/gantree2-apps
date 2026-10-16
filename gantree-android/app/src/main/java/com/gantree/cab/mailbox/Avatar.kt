@@ -80,11 +80,15 @@ fun blobUrl(origin: String, path: String, slug: String, rev: Int = 0): String {
   return if (rev > 0) "$base&v=$rev" else base
 }
 
+const val AVATAR_PATH = "/api/chat/avatar"
+const val BACKDROP_PATH = "/api/chat/backdrop"
+const val THEME_PATH = "/api/chat/theme"
+
 fun avatarUrl(origin: String, slug: String, rev: Int = 0): String =
-  blobUrl(origin, "/api/avatar", slug, rev)
+  blobUrl(origin, AVATAR_PATH, slug, rev)
 
 fun backdropUrl(origin: String, slug: String, rev: Int = 0): String =
-  blobUrl(origin, "/api/backdrop", slug, rev)
+  blobUrl(origin, BACKDROP_PATH, slug, rev)
 
 fun themeUrl(origin: String, slug: String): String =
-  "${httpOrigin(origin)}/api/theme?slug=$slug"
+  "${httpOrigin(origin)}$THEME_PATH?slug=$slug"

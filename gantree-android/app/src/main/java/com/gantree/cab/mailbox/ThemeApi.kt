@@ -6,7 +6,7 @@ import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 /**
- * GET `/api/theme?slug=`. Returns a known id, empty when the room has none,
+ * GET `/api/chat/theme?slug=`. Returns a known id, empty when the room has none,
  * null when the request failed (keep whatever we already have).
  */
 class ThemeApi(

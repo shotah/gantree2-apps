@@ -111,14 +111,18 @@ public func blobUrl(_ origin: String, path: String, slug: String, rev: Int = 0) 
   return rev > 0 ? "\(base)&v=\(rev)" : base
 }
 
+public let avatarPath = "/api/chat/avatar"
+public let backdropPath = "/api/chat/backdrop"
+public let themePath = "/api/chat/theme"
+
 public func avatarUrl(_ origin: String, slug: String, rev: Int = 0) -> String {
-  blobUrl(origin, path: "/api/avatar", slug: slug, rev: rev)
+  blobUrl(origin, path: avatarPath, slug: slug, rev: rev)
 }
 
 public func backdropUrl(_ origin: String, slug: String, rev: Int = 0) -> String {
-  blobUrl(origin, path: "/api/backdrop", slug: slug, rev: rev)
+  blobUrl(origin, path: backdropPath, slug: slug, rev: rev)
 }
 
 public func themeUrl(_ origin: String, slug: String) -> String {
-  "\(httpOrigin(origin))/api/theme?slug=\(slug)"
+  "\(httpOrigin(origin))\(themePath)?slug=\(slug)"
 }

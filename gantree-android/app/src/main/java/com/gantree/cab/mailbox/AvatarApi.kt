@@ -35,7 +35,7 @@ class AvatarApi(
   private val cache: BlobCache? = null,
 ) {
   /** What [fetch] last kept for this room — paint it before the mailbox answers. */
-  fun cached(origin: String, slug: String, path: String = "/api/avatar"): ByteArray? =
+  fun cached(origin: String, slug: String, path: String = AVATAR_PATH): ByteArray? =
     cache?.read(blobCacheKey(origin, slug, path))?.bytes
 
   /**
@@ -49,7 +49,7 @@ class AvatarApi(
     slug: String,
     bearer: String,
     rev: Int,
-    path: String = "/api/avatar",
+    path: String = AVATAR_PATH,
   ): ByteArray? {
     val key = blobCacheKey(origin, slug, path)
     val held = cache?.rev(key) ?: 0

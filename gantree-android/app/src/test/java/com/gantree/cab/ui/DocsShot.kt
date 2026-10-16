@@ -625,16 +625,7 @@ private fun paintHatchPhoto(g: Graphics2D, ink: ShotInk, x: Float, y: Float, w: 
 
 private fun sampleHatch(): BufferedImage? = sampleNodpi("sample_hatch.jpg")
 
-internal fun sampleDefaultAvatarMark(): BufferedImage? = sampleMipmap("ic_launcher.png")
-
-private fun sampleMipmap(name: String): BufferedImage? {
-  val file = listOf(
-    File("app/src/main/res/mipmap-xxxhdpi/$name"),
-    File("src/main/res/mipmap-xxxhdpi/$name"),
-    File("../shared/brand/android/mipmap-xxxhdpi/$name"),
-  ).firstOrNull { it.isFile } ?: return null
-  return ImageIO.read(file)
-}
+internal fun sampleDefaultAvatarMark(): BufferedImage? = sampleNodpi("kit_face.png")
 
 private fun sampleNodpi(name: String): BufferedImage? {
   val file = listOf(

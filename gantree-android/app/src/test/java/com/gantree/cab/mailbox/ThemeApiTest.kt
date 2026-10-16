@@ -42,7 +42,7 @@ class ThemeApiTest {
     val origin = server.url("/").toString()
     assertEquals("rain", api.fetch(origin, "kit", "jwe"))
     val req = server.takeRequest()
-    assertEquals("/api/theme?slug=kit", req.path)
+    assertEquals("/api/chat/theme?slug=kit", req.path)
     assertEquals("Bearer jwe", req.getHeader("Authorization"))
   }
 

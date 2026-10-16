@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
@@ -29,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -37,6 +40,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -138,17 +142,29 @@ fun CabSettings(
       },
       singleLine = true,
     )
+    // Draft until Done, blur, or Connect. A keystroke is not a new room.
+    var talkingTo by remember(slug) { mutableStateOf(slug) }
+    val commitTalkingTo = {
+      if (talkingTo != slug) onSlug(talkingTo)
+    }
     OutlinedTextField(
-      value = slug,
-      onValueChange = { onSlug(it.lowercase()) },
-      modifier = Modifier.fillMaxWidth(),
+      value = talkingTo,
+      onValueChange = { talkingTo = it.lowercase() },
+      modifier = Modifier
+        .fillMaxWidth()
+        .onFocusChanged { if (!it.isFocused) commitTalkingTo() },
       label = { Text("Talking to") },
       supportingText = { Text("The agent’s room, usually kit. Not your name.") },
       singleLine = true,
+      keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+      keyboardActions = KeyboardActions(onDone = { commitTalkingTo() }),
     )
     if (googleReady && email.isBlank()) {
       Button(
-        onClick = onGoogle,
+        onClick = {
+          commitTalkingTo()
+          onGoogle()
+        },
         enabled = !signingIn,
         modifier = Modifier.fillMaxWidth(),
       ) {
@@ -317,7 +333,10 @@ fun CabSettings(
       horizontalArrangement = Arrangement.spacedBy(8.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      FilledTonalButton(onClick = onConnect) { Text("Connect") }
+      FilledTonalButton(onClick = {
+        commitTalkingTo()
+        onConnect()
+      }) { Text("Connect") }
       if (email.isNotBlank()) {
         TextButton(onClick = onSignOut) { Text("Sign out") }
       }

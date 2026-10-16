@@ -175,6 +175,9 @@ class MailboxService : LifecycleService() {
     }
     client?.stop()
     client = null
+    // The previous socket is cancelled above. A turn queued for that room
+    // must not go out on the new dial.
+    synchronized(outboxLock) { outbox.clear() }
     app.mouth.setHint("Connecting to mailbox…")
     val mailbox = MailboxClient(
       onFrame = { frame ->

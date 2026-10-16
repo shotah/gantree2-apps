@@ -210,7 +210,7 @@ public final class ThemeApi {
     self.transport = transport
   }
 
-  /// GET `/api/theme?slug=`. Known id, empty when the room has none, nil on HTTP fail.
+  /// GET `/api/chat/theme?slug=`. Known id, empty when the room has none, nil on HTTP fail.
   public func fetch(origin: String, slug: String, bearer: String) -> String? {
     var req = URLRequest(url: URL(string: themeUrl(origin, slug: slug))!)
     req.httpMethod = "GET"

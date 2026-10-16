@@ -29,7 +29,7 @@ final class AvatarApiTests: XCTestCase {
     let got = AvatarApi(transport: http).fetch(
       origin: "http://mailbox.test/", slug: "kit", bearer: "jwe", rev: 3)
     XCTAssertEqual(fakeJpeg(), got)
-    XCTAssertEqual("/api/avatar", http.requests[0].url?.path)
+    XCTAssertEqual("/api/chat/avatar", http.requests[0].url?.path)
     XCTAssertEqual("slug=kit&v=3", http.requests[0].url?.query)
     XCTAssertEqual("Bearer jwe", http.requests[0].value(forHTTPHeaderField: "Authorization"))
   }
@@ -38,10 +38,10 @@ final class AvatarApiTests: XCTestCase {
     let http = MockHTTP()
     http.queue = [HTTPResult(status: 200, body: fakeJpeg())]
     let got = AvatarApi(transport: http).fetch(
-      origin: "http://mailbox.test/", slug: "kit", bearer: "jwe", rev: 4, path: "/api/backdrop"
+      origin: "http://mailbox.test/", slug: "kit", bearer: "jwe", rev: 4, path: "/api/chat/backdrop"
     )
     XCTAssertEqual(fakeJpeg(), got)
-    XCTAssertEqual("/api/backdrop", http.requests[0].url?.path)
+    XCTAssertEqual("/api/chat/backdrop", http.requests[0].url?.path)
     XCTAssertEqual("slug=kit&v=4", http.requests[0].url?.query)
   }
 
@@ -71,7 +71,7 @@ final class AvatarApiTests: XCTestCase {
     XCTAssertNil(http.requests[0].value(forHTTPHeaderField: "If-None-Match"))
     XCTAssertEqual(jpeg, api.cached(origin: "http://mailbox.test/", slug: "kit"))
     let stored = cache.read(
-      blobCacheKey(origin: "http://mailbox.test/", slug: "kit", path: "/api/avatar"))!
+      blobCacheKey(origin: "http://mailbox.test/", slug: "kit", path: "/api/chat/avatar"))!
     XCTAssertEqual(jpeg, stored.bytes)
     XCTAssertEqual(7, stored.rev)
     XCTAssertNil(api.cached(origin: "http://mailbox.test/", slug: "kit", path: "/api/backdrop"))
@@ -94,7 +94,7 @@ final class AvatarApiTests: XCTestCase {
     XCTAssertEqual(
       jpeg, api.fetch(origin: "http://mailbox.test/", slug: "kit", bearer: "jwe", rev: 1))
     XCTAssertEqual(
-      4, cache.rev(blobCacheKey(origin: "http://mailbox.test/", slug: "kit", path: "/api/avatar")))
+      4, cache.rev(blobCacheKey(origin: "http://mailbox.test/", slug: "kit", path: "/api/chat/avatar")))
     XCTAssertEqual(
       jpeg,
       api.fetch(
@@ -125,7 +125,7 @@ final class AvatarApiTests: XCTestCase {
       jpeg, api.fetch(origin: "http://mailbox.test/", slug: "kit", bearer: "jwe", rev: 0))
     XCTAssertEqual("\"7\"", http.requests[1].value(forHTTPHeaderField: "If-None-Match"))
     XCTAssertEqual(
-      7, cache.rev(blobCacheKey(origin: "http://mailbox.test/", slug: "kit", path: "/api/avatar")))
+      7, cache.rev(blobCacheKey(origin: "http://mailbox.test/", slug: "kit", path: "/api/chat/avatar")))
     XCTAssertEqual(
       next, api.fetch(origin: "http://mailbox.test/", slug: "kit", bearer: "jwe", rev: 8))
     XCTAssertEqual("\"7\"", http.requests[2].value(forHTTPHeaderField: "If-None-Match"))

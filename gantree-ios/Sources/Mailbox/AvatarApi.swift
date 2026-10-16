@@ -17,7 +17,7 @@ enum Fetched {
   case failed
 }
 
-/// Conditional GET for `/api/avatar` or `/api/backdrop`. A 304 or a failed
+/// Conditional GET for `/api/chat/avatar` or `/api/chat/backdrop`. A 304 or a failed
 /// request keeps the cached bytes; a 404 forgets them.
 ///
 /// Immutable after init, so it may cross threads; `@unchecked` only because
@@ -32,7 +32,7 @@ public final class AvatarApi: @unchecked Sendable {
   }
 
   /// What [fetch] last kept for this room — paint it before the mailbox answers.
-  public func cached(origin: String, slug: String, path: String = "/api/avatar") -> Data? {
+  public func cached(origin: String, slug: String, path: String = avatarPath) -> Data? {
     cache?.read(blobCacheKey(origin: origin, slug: slug, path: path))?.bytes
   }
 
@@ -44,7 +44,7 @@ public final class AvatarApi: @unchecked Sendable {
     slug: String,
     bearer: String,
     rev: Int,
-    path: String = "/api/avatar"
+    path: String = avatarPath
   ) -> Data? {
     let key = blobCacheKey(origin: origin, slug: slug, path: path)
     let held = cache?.rev(key) ?? 0
