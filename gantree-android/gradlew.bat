@@ -97,10 +97,6 @@ if exist "%JAVA_EXE%" goto execute
 goto exitWithErrorLevel
 
 :execute
-@rem gradle-wrapper.jar is not committed. See scripts/wrapper-jar.sh.
-bash "%APP_HOME%\scripts\wrapper-jar.sh"
-if %ERRORLEVEL% neq 0 goto exitWithErrorLevel
-
 @rem Setup the command line
 
 
