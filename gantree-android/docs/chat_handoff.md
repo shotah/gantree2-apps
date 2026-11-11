@@ -183,7 +183,7 @@ unless that walk is the ticket ([todo.md](todo.md) Not this version).
       (`mailbox/Speech.kt`), release sends `inbound` + `input:
       spoken` (`MailboxService.sendSpoken`), slide-off aborts, a
       watchdog ends a hung session. The next live `reply` after a hold
-      is read via `POST /api/tts` with the Bearer session
+      is read via `POST /api/chat/tts?slug=` with the Bearer session
       (`mailbox/TtsApi.kt`, `KitVoice`), markdown → words first
       (`mailbox/Speakable.kt`); `push` / `replay` / typed turns never
       speak, `error` disarms (`mailbox/Speaker.kt`). Header says
@@ -192,7 +192,7 @@ unless that walk is the ticket ([todo.md](todo.md) Not this version).
       (`en` / `ja` / `zh` / `vi`, default `en`, `CabPrefs.lang` = the
       same ids as `pendant.lang`; only shown when voice is published):
       the hold bar listens in its BCP-47 (`EXTRA_LANGUAGE` +
-      `EXTRA_LANGUAGE_PREFERENCE`, `zh` → `zh-CN`, `vi` → `vi-VN`) and `/api/tts` gets
+      `EXTRA_LANGUAGE_PREFERENCE`, `zh` → `zh-CN`, `vi` → `vi-VN`) and `/api/chat/tts` gets
       additive `lang` so the Worker swaps the Chirp locale and keeps
       the speaker (`mailbox/Lang.kt`; pendant `frontends.md`
       Language). Not on the mailbox wire. **Auto is untouched**:
@@ -215,7 +215,7 @@ unless that walk is the ticket ([todo.md](todo.md) Not this version).
   `input: spoken` (Auto host STT, and the handheld hold bar) are read
   by the agent as the `[surface]` / `[input]` stamps — closed sets,
   junk is dropped. Typed compose stays untagged.
-- No audio on the wire. STT is the phone's, TTS is `POST /api/tts`
+- No audio on the wire. STT is the phone's, TTS is `POST /api/chat/tts`
   bytes played from memory (`MediaDataSource`), never a file.
 - Language is not a `context` key. Send the id (`ja`), never the
   recognizer tag (`ja-JP`) — the Worker drops what it does not know

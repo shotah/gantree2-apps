@@ -11,8 +11,8 @@ final class MailboxSocket: NSObject, URLSessionWebSocketDelegate {
   private var stopped = true
   private var attempt = 0
   private var openedAt: Int64 = 0
-  private var room: (origin: String, slug: String, bearer: String)?
-  private let seen = SeenCursor()
+  /// The room last started. Its slug is the room a heard reply belongs to.
+  private(set) var room: (origin: String, slug: String, bearer: String)?
   private var retrying = false
   private var authLost = false
   private var generation = 0
@@ -25,10 +25,6 @@ final class MailboxSocket: NSObject, URLSessionWebSocketDelegate {
     self.onFrame = onFrame
     self.onState = onState
     self.onAuthLost = onAuthLost
-  }
-
-  func remember(id: String, seq: Int?) {
-    seen.remember(id: id, seq: seq)
   }
 
   func start(origin: String, slug: String, bearer: String) {
@@ -65,14 +61,23 @@ final class MailboxSocket: NSObject, URLSessionWebSocketDelegate {
     return true
   }
 
+  /// Dials the room in place of any socket in flight. An address that does not parse fails like a refused dial.
   private func connect(origin: String, slug: String, bearer: String) {
     if stopped {
       return
     }
     generation += 1
     let gen = generation
-    task?.cancel(with: .goingAway, reason: nil)
-    let url = URL(string: mailboxUrl(origin, slug: slug))!
+    // Let go of the socket before cancelling it, so its end is not taken for the live one's.
+    let replaced = task
+    task = nil
+    replaced?.cancel(with: .goingAway, reason: nil)
+    session?.finishTasksAndInvalidate()
+    guard let url = URL(string: mailboxUrl(origin, slug: slug)) else {
+      onState(false)
+      retry(httpCode: nil)
+      return
+    }
     var req = URLRequest(url: url, timeoutInterval: 15)
     req.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization")
     let config = URLSessionConfiguration.ephemeral
@@ -114,6 +119,7 @@ final class MailboxSocket: NSObject, URLSessionWebSocketDelegate {
     }
   }
 
+  /// Answers a ping, or hands a parsed frame to the model, which keeps the read cursor.
   private func handle(_ text: String) {
     if text == "ping" {
       task?.send(.string("pong")) { _ in }
@@ -122,10 +128,10 @@ final class MailboxSocket: NSObject, URLSessionWebSocketDelegate {
     guard let frame = parseFrame(text) else {
       return
     }
-    seen.note(frame: frame)
     onFrame(frame)
   }
 
+  /// Marks the live socket up. The model answers with the connect ack from its read cursor.
   func urlSession(
     _ session: URLSession,
     webSocketTask: URLSessionWebSocketTask,
@@ -135,11 +141,11 @@ final class MailboxSocket: NSObject, URLSessionWebSocketDelegate {
       webSocketTask.cancel(with: .goingAway, reason: nil)
       return
     }
+    guard isLiveTask(webSocketTask) else {
+      return
+    }
     attempt = 0
     openedAt = Int64(Date().timeIntervalSince1970 * 1000)
-    if let since = seen.since() {
-      webSocketTask.send(.string(encodeFrame(ackSince(since)))) { _ in }
-    }
     onState(true)
   }
 
@@ -149,6 +155,10 @@ final class MailboxSocket: NSObject, URLSessionWebSocketDelegate {
     didCloseWith closeCode: URLSessionWebSocketTask.CloseCode,
     reason: Data?
   ) {
+    guard isLiveTask(webSocketTask) else {
+      return
+    }
+    self.task = nil
     if mailboxCloseDropsAuth(Int(closeCode.rawValue)) {
       dropAuth()
       return
@@ -161,6 +171,10 @@ final class MailboxSocket: NSObject, URLSessionWebSocketDelegate {
     if stopped {
       return
     }
+    guard isLiveTask(task) else {
+      return
+    }
+    self.task = nil
     let code = (task.response as? HTTPURLResponse)?.statusCode
     onState(false)
     if mailboxHttpDropsSession(code) {
@@ -168,6 +182,11 @@ final class MailboxSocket: NSObject, URLSessionWebSocketDelegate {
       return
     }
     retry(httpCode: code)
+  }
+
+  /// A replaced socket still reports its own end. Only the socket in use may change state.
+  private func isLiveTask(_ reporting: URLSessionTask) -> Bool {
+    reporting === task
   }
 
   private func dropAuth() {
@@ -200,7 +219,8 @@ final class MailboxSocket: NSObject, URLSessionWebSocketDelegate {
         return
       }
       self.retrying = false
-      if let room, !self.stopped {
+      // A send or a sweep may have dialed since. Redial only when no socket is up or on its way.
+      if let room, !self.stopped, self.task == nil {
         self.connect(origin: room.origin, slug: room.slug, bearer: room.bearer)
       }
     }

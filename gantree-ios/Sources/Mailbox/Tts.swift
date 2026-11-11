@@ -9,8 +9,14 @@ public enum TtsResult: Equatable {
   case err(SpeakFail)
 }
 
-public func ttsUrl(_ origin: String) -> String {
-  httpOrigin(origin) + "/api/tts"
+/// The Worker route that speaks a reply for one room.
+///
+/// - Parameters:
+///   - origin: The gantree origin, HTTP or socket form.
+///   - slug: The room the reply belongs to. The Worker admits the caller against it.
+/// - Returns: `<http origin>/api/chat/tts?slug=<slug>`.
+public func ttsUrl(_ origin: String, slug: String) -> String {
+  "\(httpOrigin(origin))/api/chat/tts?slug=\(slug)"
 }
 
 public final class TtsApi {
@@ -20,11 +26,21 @@ public final class TtsApi {
     self.transport = transport
   }
 
-  public func synthesize(origin: String, bearer: String, text: String, lang: String = defaultLang)
-    -> TtsResult
-  {
+  /// Asks the Worker to speak `text` for a room.
+  ///
+  /// - Parameters:
+  ///   - origin: The gantree origin.
+  ///   - slug: The room the reply belongs to.
+  ///   - bearer: The session sent as `Authorization`. Blank sends none.
+  ///   - text: The words to speak, already stripped of markdown and clipped.
+  ///   - lang: The Settings language id. An unknown id falls back to the default.
+  /// - Returns: The MP3 bytes, or why there are none: the HTTP status mapped by
+  ///   `speakFailFromStatus`, `.vendor` for an empty body, `.offline` when the request failed.
+  public func synthesize(
+    origin: String, slug: String, bearer: String, text: String, lang: String = defaultLang
+  ) -> TtsResult {
     let payload = JSON.stringify(["text": text, "lang": parseLang(lang)])
-    var req = URLRequest(url: URL(string: ttsUrl(origin))!)
+    var req = URLRequest(url: URL(string: ttsUrl(origin, slug: slug))!)
     req.httpMethod = "POST"
     req.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
     req.httpBody = payload.data(using: .utf8)

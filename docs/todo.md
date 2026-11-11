@@ -18,10 +18,9 @@ Wire names were fixed in gantree on 2026-10-10 (see its
 
 ## Needs a Mac
 
-- Rename the Xcode target, scheme, and project from Helm to gantree
-  via `gantree-ios/app/project.yml` + `xcodegen generate`.
 - Re-check the CarPlay entitlement.
-- Run `make -C gantree-ios ios`.
+- Add an Apple ID in Xcode, then Run on the iPhone
+  ([sideload_to_ios.md](../gantree-ios/docs/sideload_to_ios.md)).
 
 ## 0. Repo
 

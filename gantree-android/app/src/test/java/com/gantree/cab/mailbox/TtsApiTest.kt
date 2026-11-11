@@ -30,8 +30,8 @@ class TtsApiTest {
 
   @Test
   fun ttsUrlIsTheWorkerRoute() {
-    assertEquals("https://gantree.example/api/tts", ttsUrl("https://gantree.example/"))
-    assertEquals("http://10.0.2.2:3000/api/tts", ttsUrl(" http://10.0.2.2:3000 "))
+    assertEquals("https://gantree.example/api/chat/tts?slug=kit", ttsUrl("https://gantree.example/", "kit"))
+    assertEquals("http://10.0.2.2:3000/api/chat/tts?slug=ada", ttsUrl(" http://10.0.2.2:3000 ", "ada"))
   }
 
   @Test
@@ -42,12 +42,12 @@ class TtsApiTest {
         .setHeader("Content-Type", "audio/mpeg")
         .setBody(Buffer().write(mp3)),
     )
-    val got = api.synthesize(server.url("/").toString(), "jwe", "On my way.")
+    val got = api.synthesize(server.url("/").toString(), "kit", "jwe", "On my way.")
     assertTrue(got is TtsResult.Ok)
     assertArrayEquals(mp3, (got as TtsResult.Ok).mp3)
     val req = server.takeRequest()
     assertEquals("POST", req.method)
-    assertEquals("/api/tts", req.path)
+    assertEquals("/api/chat/tts?slug=kit", req.path)
     assertEquals("Bearer jwe", req.getHeader("Authorization"))
     assertNull(req.getHeader("Cookie"))
     assertTrue(req.getHeader("Content-Type").orEmpty().startsWith("application/json"))
@@ -59,18 +59,18 @@ class TtsApiTest {
   @Test
   fun languageRidesOnTheBodyAsTheSettingsId() {
     server.enqueue(MockResponse().setBody(Buffer().write(byteArrayOf(1))))
-    api.synthesize(server.url("/").toString(), "jwe", "今夜は雨です。", lang = "ja")
+    api.synthesize(server.url("/").toString(), "kit", "jwe", "今夜は雨です。", lang = "ja")
     assertEquals("ja", JSONObject(server.takeRequest().body.readUtf8()).getString("lang"))
     // Never the recognizer tag, never junk: the Worker would drop it and speak the default anyway.
     server.enqueue(MockResponse().setBody(Buffer().write(byteArrayOf(1))))
-    api.synthesize(server.url("/").toString(), "jwe", "hi", lang = "zh-CN")
+    api.synthesize(server.url("/").toString(), "kit", "jwe", "hi", lang = "zh-CN")
     assertEquals("en", JSONObject(server.takeRequest().body.readUtf8()).getString("lang"))
   }
 
   @Test
   fun noBearerSendsNoAuthorizationHeader() {
     server.enqueue(MockResponse().setResponseCode(401))
-    assertEquals(TtsResult.Err(SpeakFail.UNAUTHORIZED), api.synthesize(server.url("/").toString(), "", "hi"))
+    assertEquals(TtsResult.Err(SpeakFail.UNAUTHORIZED), api.synthesize(server.url("/").toString(), "kit", "", "hi"))
     assertNull(server.takeRequest().getHeader("Authorization"))
   }
 
@@ -78,25 +78,25 @@ class TtsApiTest {
   fun workerStatusesNameTheReason() {
     val origin = server.url("/").toString()
     server.enqueue(MockResponse().setResponseCode(404))
-    assertEquals(TtsResult.Err(SpeakFail.NO_VOICE), api.synthesize(origin, "jwe", "hi"))
+    assertEquals(TtsResult.Err(SpeakFail.NO_VOICE), api.synthesize(origin, "kit", "jwe", "hi"))
     server.enqueue(MockResponse().setResponseCode(403).setBody("""{"error":"unauthorized"}"""))
-    assertEquals(TtsResult.Err(SpeakFail.UNAUTHORIZED), api.synthesize(origin, "jwe", "hi"))
+    assertEquals(TtsResult.Err(SpeakFail.UNAUTHORIZED), api.synthesize(origin, "kit", "jwe", "hi"))
     server.enqueue(MockResponse().setResponseCode(429))
-    assertEquals(TtsResult.Err(SpeakFail.BUSY), api.synthesize(origin, "jwe", "hi"))
+    assertEquals(TtsResult.Err(SpeakFail.BUSY), api.synthesize(origin, "kit", "jwe", "hi"))
     server.enqueue(MockResponse().setResponseCode(502).setBody("""{"error":"tts"}"""))
-    assertEquals(TtsResult.Err(SpeakFail.VENDOR), api.synthesize(origin, "jwe", "hi"))
+    assertEquals(TtsResult.Err(SpeakFail.VENDOR), api.synthesize(origin, "kit", "jwe", "hi"))
   }
 
   @Test
   fun anEmptyClipIsAVendorFailure() {
     server.enqueue(MockResponse().setResponseCode(200))
-    assertEquals(TtsResult.Err(SpeakFail.VENDOR), api.synthesize(server.url("/").toString(), "jwe", "hi"))
+    assertEquals(TtsResult.Err(SpeakFail.VENDOR), api.synthesize(server.url("/").toString(), "kit", "jwe", "hi"))
   }
 
   @Test
   fun anUnreachableWorkerIsOffline() {
     val origin = server.url("/").toString()
     server.shutdown()
-    assertEquals(TtsResult.Err(SpeakFail.OFFLINE), api.synthesize(origin, "jwe", "hi"))
+    assertEquals(TtsResult.Err(SpeakFail.OFFLINE), api.synthesize(origin, "kit", "jwe", "hi"))
   }
 }

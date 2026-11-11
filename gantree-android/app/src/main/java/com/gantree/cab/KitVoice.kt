@@ -26,7 +26,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * Kit's pocket voice. The live `reply` to a hold this phone armed goes
- * `speakable()` → `POST /api/tts` (Bearer) → MP3 → [MediaPlayer]. Android Auto
+ * `speakable()` → `POST /api/chat/tts?slug=` (Bearer) → MP3 → [MediaPlayer]. Android Auto
  * keeps the host engine on the HUN; nothing here runs for the car. Gantree
  * `app/lib/tts.ts` plus the `awaitingVoice` gate in `PhoneShell`.
  *
@@ -36,6 +36,8 @@ import kotlinx.coroutines.withContext
 class KitVoice(
   private val tts: TtsApi,
   private val origin: () -> String,
+  /** Room slug as sent on the wire, read at speak time like [origin]. */
+  private val slug: () -> String,
   private val bearer: () -> String,
   private val hint: (String) -> Unit,
   /** Settings → Language id, read at speak time so a pick mid-thread takes on the next reply. */
@@ -76,6 +78,7 @@ class KitVoice(
     }
   }
 
+  /** Reads [markdown] aloud in the room, origin, and language current at speak time; replaces any reply already playing. */
   private fun speak(markdown: String) {
     val text = clipForSpeech(speakable(markdown))
     scope.launch {
@@ -88,7 +91,7 @@ class KitVoice(
         return@launch
       }
       _phase.value = SpeakPhase.FETCHING
-      when (val got = withContext(Dispatchers.IO) { tts.synthesize(origin(), bearer(), text, lang()) }) {
+      when (val got = withContext(Dispatchers.IO) { tts.synthesize(origin(), slug(), bearer(), text, lang()) }) {
         is TtsResult.Err -> fail(got.reason)
         is TtsResult.Ok -> play(got.mp3)
       }

@@ -1,6 +1,6 @@
 # gantree2-apps
 
-Two native apps, one repo. `gantree-android` is Kotlin, Compose, Car App Library, Gradle, applicationId `com.gantree.cab`. `gantree-ios` is Swift, SwiftUI, SwiftPM package `Sources/Mailbox` plus an Xcode app still named Helm, bundle id `com.gantree.helm`. Launcher name on both is gantree. Do not rename the applicationId or bundle id in a drive-by.
+Two native apps, one repo. `gantree-android` is Kotlin, Compose, Car App Library, Gradle, applicationId `com.gantree.cab`. `gantree-ios` is Swift, SwiftUI, SwiftPM package `Sources/Mailbox` plus an Xcode app named gantree, bundle id `com.gantree.helm`. Launcher name on both is gantree. Do not rename the applicationId or bundle id in a drive-by.
 
 ## Commands
 

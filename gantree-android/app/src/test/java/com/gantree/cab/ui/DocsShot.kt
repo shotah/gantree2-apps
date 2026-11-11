@@ -260,6 +260,7 @@ fun renderPhone(
   return img
 }
 
+/** Paints the Auto stand-in for a sample, titled with the name the phone header shows. */
 fun renderAuto(sampleId: String): BufferedImage {
   val scene = sampleScene(sampleId) ?: error("sample $sampleId")
   val rows = carRows(scene.lines, scene.slug, "No messages yet. Reply on this conversation to talk.")
@@ -271,7 +272,7 @@ fun renderAuto(sampleId: String): BufferedImage {
   var y = 28
   g.font = font.deriveFont(28f)
   g.color = CarAccent
-  y = g.drawLine(scene.slug.ifBlank { "cab" }, 48, y, 28)
+  y = g.drawLine(displaySlug(scene.slug), 48, y, 28)
   y += 12
   g.color = CarLine
   g.stroke = BasicStroke(1f)

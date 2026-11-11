@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed-icon layer: the one-colour status mark placed exactly where
+     ic_launcher_foreground.xml paints the coloured one (one logo unit = 1/108
+     of the canvas, logo origin at 22,22). The 24-unit icon draws the logo at
+     0.346 per unit, so it spans 24 / 0.346 = 69.364 of 108; its 1.58 / 1.146
+     offsets put the logo origin at left 22 - 1.58 / 0.346 = 17.434 and top
+     22 - 1.146 / 0.346 = 18.688. Fractions so the layer scales with any icon size. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_stat_cab"
+    android:insetLeft="16.142%"
+    android:insetTop="17.304%"
+    android:insetRight="19.632%"
+    android:insetBottom="18.470%" />

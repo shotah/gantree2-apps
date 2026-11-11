@@ -77,8 +77,9 @@ fun TasksButton(shown: Boolean, changed: Int, onOpen: () -> Unit) {
 
 /**
  * One checklist row per task: `!!` urgent first, then `!` high, then the
- * rest, oldest first inside each rank; the marker paints as a coloured tag
- * ahead of the words, not as the first word. The checkbox sends `/todo done
+ * rest, oldest first inside each rank; the priority (the agent's `priority`
+ * key, else the marker) paints as a coloured tag ahead of the words, not as
+ * the first word. The checkbox sends `/todo done
  * <id>` and the sheet **stays open** so several can be ticked; the row shows
  * ticked and struck through and will not send twice. Add and "Full list"
  * close the sheet so the answer is in view. A new list settles every tick.
@@ -128,7 +129,7 @@ fun TasksSheet(
       }
       for (row in sortTodo(rows)) {
         val done = row.id in ticked
-        val priority = todoPriority(row.text)
+        val priority = todoPriority(row)
         Row(
           modifier = Modifier.fillMaxWidth(),
           verticalAlignment = Alignment.CenterVertically,

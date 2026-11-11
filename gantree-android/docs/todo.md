@@ -50,9 +50,9 @@ letting another app read the thread are the failures that matter.
 - [x] **Pocket voice.** Header mic (when the Worker publishes
       `voice`) swaps compose for a hold-to-talk bar; release sends
       `inbound` + `input: spoken`; the next live `reply` is read via
-      `POST /api/tts`. Access block in Settings asks mic / location /
+      `POST /api/chat/tts?slug=`. Access block in Settings asks mic / location /
       notifications. Settings → Language (`en` / `ja` / `zh` / `vi`) sets the
-      recognizer locale and rides on `/api/tts` as `lang`. Auto
+      recognizer locale and rides on `/api/chat/tts` as `lang`. Auto
       untouched. Detail: [chat_handoff.md](chat_handoff.md)
       Pocket voice. `SpeakableTest` / `SpeechTest` / `SpeakerTest` /
       `TtsApiTest` / `LangTest` / `HoldToTalkTest` (Robolectric +

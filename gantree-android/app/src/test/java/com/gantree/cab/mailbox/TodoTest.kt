@@ -101,6 +101,55 @@ class TodoTest {
     assertEquals(TodoPriority.URGENT, todoPriority(rows[0].text))
   }
 
+  /** The agent's `priority` key ranks the row even when the words carry no marker. */
+  @Test
+  fun priorityKeyRanksARowWithoutAMarker() {
+    val rows = parseTodo(
+      JSONObject(
+        """{"todo":[
+          {"id":1,"slug":"a","text":"plain words","at":"2026-09-01"},
+          {"id":2,"slug":"b","text":"file the extension","at":"2026-09-02","priority":"urgent"},
+          {"id":3,"slug":"c","text":"renew","at":"2026-09-03","priority":"high"}
+        ]}""",
+      ),
+    )!!
+    assertEquals(listOf(null, TodoPriority.URGENT, TodoPriority.HIGH), rows.map { it.priority })
+    assertEquals(TodoPriority.URGENT, todoPriority(rows[1]))
+    assertEquals(TodoPriority.HIGH, todoPriority(rows[2]))
+    assertEquals(TodoPriority.NORMAL, todoPriority(rows[0]))
+    assertEquals(listOf(2L, 3L, 1L), sortTodo(rows).map { it.id })
+  }
+
+  /** The key wins over the marker; the marker still leaves the painted words. */
+  @Test
+  fun priorityKeyWinsOverTheMarker() {
+    val rows = parseTodo(
+      JSONObject("""{"todo":[{"id":1,"slug":"x","text":"!! file it","at":"2026-09-01","priority":"high"}]}"""),
+    )!!
+    assertEquals(TodoPriority.HIGH, todoPriority(rows[0]))
+    assertEquals("file it", todoWords(rows[0].text))
+  }
+
+  /** `normal`, an unknown word, a different case, or a non-string is no key: the marker says. */
+  @Test
+  fun unknownPriorityValueIsNoKey() {
+    val rows = parseTodo(
+      JSONObject(
+        """{"todo":[
+          {"id":1,"slug":"a","text":"! renew","at":"2026-09-01","priority":"critical"},
+          {"id":2,"slug":"b","text":"call","at":"2026-09-01","priority":"normal"},
+          {"id":3,"slug":"c","text":"call","at":"2026-09-01","priority":"URGENT"},
+          {"id":4,"slug":"d","text":"call","at":"2026-09-01","priority":2}
+        ]}""",
+      ),
+    )!!
+    assertEquals(listOf<TodoPriority?>(null, null, null, null), rows.map { it.priority })
+    assertEquals(TodoPriority.HIGH, todoPriority(rows[0]))
+    assertEquals(TodoPriority.NORMAL, todoPriority(rows[1]))
+    assertEquals(TodoPriority.NORMAL, todoPriority(rows[2]))
+    assertEquals(TodoPriority.NORMAL, todoPriority(rows[3]))
+  }
+
   /** Urgent, then high, then the rest; the frame's oldest-first order holds inside each rank. */
   @Test
   fun sortTodoIsByPriorityThenFrameOrder() {
@@ -157,6 +206,9 @@ class TodoTest {
     val rewritten = rows.map { if (it.slug == "dentist") it.copy(id = 500) else it }
     assertEquals(1, changedTodo(rewritten, seen))
     assertEquals(1, changedTodo(rows.filter { it.slug == "passport" }, seen))
+    // The agent raising a task's priority key is a change too, as it is on the PWA.
+    val raised = rows.map { if (it.slug == "passport") it.copy(priority = TodoPriority.HIGH) else it }
+    assertEquals(1, changedTodo(raised, seen))
     assertEquals(seen, parseSeenTodo(encodeSeenTodo(seen)))
     assertTrue(parseSeenTodo("nope").isEmpty())
   }

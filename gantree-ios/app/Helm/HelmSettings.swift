@@ -20,7 +20,7 @@ struct HelmSettings: View {
           Text("Talking to").font(.caption).foregroundStyle(Color(rgb: colors.muted))
           ChipWrap {
             ForEach(model.agents, id: \.self) { c in
-              chip(displaySlug(c), on: c == model.slug) { model.slug = c }
+              chip(displaySlug(c), on: c == model.slug) { model.pickAgent(c) }
             }
           }
         }
@@ -45,14 +45,7 @@ struct HelmSettings: View {
           .foregroundStyle(Color(rgb: colors.dim))
         if model.googleReady && model.email.isEmpty {
           Button {
-            HelmGoogle.signIn(webClientId: model.webClientId, origin: model.origin) { result in
-              switch result {
-              case .success(let session):
-                model.applyGoogle(session: session)
-              case .failure(let err):
-                model.noteSignInFailure(err)
-              }
-            }
+            model.signIn()
           } label: {
             Text(model.signingIn ? "Opening Google…" : "Continue with Google")
               .frame(maxWidth: .infinity)

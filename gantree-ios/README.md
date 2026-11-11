@@ -113,7 +113,7 @@ callback.
 
 ## Hello
 
-Xcode on a Mac opens `app/Helm.xcodeproj` (local Swift package
+Xcode on a Mac opens `app/gantree.xcodeproj` (local Swift package
 `Mailbox`). Linux / CI run the mailbox tests, same shape as
 gantree-android:
 

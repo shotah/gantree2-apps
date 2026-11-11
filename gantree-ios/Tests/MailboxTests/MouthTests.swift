@@ -367,4 +367,42 @@ final class MouthTests: XCTestCase {
       threadStatusLine(up: true, hint: "pin ±12m this send", typingUntil: 1, nowMs: 1))
     XCTAssertEqual("Live", threadStatusLine(up: true, hint: "", typingUntil: 0, nowMs: 1))
   }
+
+  func testDraftExpiresWhenTheAgentGoesQuiet() {
+    var t: Int64 = 1_000
+    let mouth = Mouth { t }
+    mouth.ingest(WireFrame(kind: "draft", text: "Gate"))
+    t += draftTtlMs - 1
+    XCTAssertFalse(mouth.expireDraft())
+    XCTAssertEqual(1, mouth.lines.count)
+    t += 1
+    XCTAssertTrue(mouth.expireDraft())
+    XCTAssertTrue(mouth.lines.isEmpty)
+  }
+
+  func testTypingAndNewWordsKeepADraftAlive() {
+    var t: Int64 = 1_000
+    let mouth = Mouth { t }
+    mouth.ingest(WireFrame(kind: "draft", text: "Gate"))
+    t += draftTtlMs - 5_000
+    mouth.ingest(WireFrame(kind: "typing"))
+    t += draftTtlMs - 5_000
+    XCTAssertFalse(mouth.expireDraft())
+    mouth.ingest(WireFrame(kind: "draft", text: "Gate's on"))
+    t += draftTtlMs - 1
+    XCTAssertFalse(mouth.expireDraft())
+    t += 1
+    XCTAssertTrue(mouth.expireDraft())
+  }
+
+  func testAReSentIdenticalDraftIsNotLife() {
+    var t: Int64 = 1_000
+    let mouth = Mouth { t }
+    mouth.ingest(WireFrame(kind: "draft", text: "Gate"))
+    t += draftTtlMs / 2
+    mouth.ingest(WireFrame(kind: "draft", text: "Gate"))
+    t += draftTtlMs / 2
+    XCTAssertTrue(mouth.expireDraft())
+    XCTAssertTrue(mouth.lines.isEmpty)
+  }
 }

@@ -124,7 +124,7 @@ struct HelmScreen: View {
       if !model.sampleShown {
         HelmNotify.setup()
       }
-      if !model.sampleShown && model.mouth.lines.isEmpty && !model.bearer.isEmpty {
+      if !model.sampleShown && !model.up && !model.bearer.isEmpty {
         model.connect()
       }
     }

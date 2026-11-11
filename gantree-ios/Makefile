@@ -96,8 +96,8 @@ shot: ## Simulator screenshots into assets/docs (needs Xcode)
 
 .PHONY: ios
 ios: ## Build the iOS app unsigned (needs Xcode)
-	@command -v xcodebuild >/dev/null || (echo "xcodebuild not on PATH — open app/Helm.xcodeproj on a Mac" >&2; exit 1)
-	xcodebuild -project app/Helm.xcodeproj -scheme Helm -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+	@command -v xcodebuild >/dev/null || (echo "xcodebuild not on PATH — open app/gantree.xcodeproj on a Mac" >&2; exit 1)
+	xcodebuild -project app/gantree.xcodeproj -scheme gantree -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 
 .PHONY: ci
 ci: check ## Local stand-in for CI checks

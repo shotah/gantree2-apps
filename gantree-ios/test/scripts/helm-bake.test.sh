@@ -53,20 +53,22 @@ grep -q '#include? "Helm.local.xcconfig"' "$root/app/Helm.xcconfig" || {
   echo "FAIL: Helm.xcconfig should include the local bake" >&2
   exit 1
 }
-grep -q 'baseConfigurationReference' "$root/app/Helm.xcodeproj/project.pbxproj" || {
+grep -q 'baseConfigurationReference' "$root/app/gantree.xcodeproj/project.pbxproj" || {
   echo "FAIL: Xcode target should use Helm.xcconfig" >&2
   exit 1
 }
 
 out="$(mktemp)"
 trap 'rm -f "$out"' EXIT
+# No env file: a sideload .env in this checkout must not replace the values below.
 HELM_BAKE_OUT="$out" \
+  HELM_BAKE_ENV=/dev/null \
   HELM_MAILBOX_ORIGIN="https://gantree.example.com" \
   HELM_GOOGLE_WEB_CLIENT_ID="web.example" \
   HELM_GOOGLE_IOS_CLIENT_ID="prefix.apps.googleusercontent.com" \
   "$bake"
-grep -q 'HELM_MAILBOX_ORIGIN = https://gantree.example.com' "$out" || {
-  echo "FAIL: bake should write origin" >&2
+grep -qxF 'HELM_MAILBOX_ORIGIN = https:/$()/gantree.example.com' "$out" || {
+  echo "FAIL: bake should write the origin with // split, or xcconfig reads it as a comment" >&2
   cat "$out" >&2
   exit 1
 }
@@ -77,7 +79,7 @@ grep -q 'HELM_GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.prefix' "$o
 }
 
 plist="$root/app/Info.plist"
-grep -q 'com.gantree.helm\|PRODUCT_BUNDLE_IDENTIFIER' "$root/app/Helm.xcodeproj/project.pbxproj" || {
+grep -q 'com.gantree.helm\|PRODUCT_BUNDLE_IDENTIFIER' "$root/app/gantree.xcodeproj/project.pbxproj" || {
   echo "FAIL: Xcode project must set com.gantree.helm" >&2
   exit 1
 }

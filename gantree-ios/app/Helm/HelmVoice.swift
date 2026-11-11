@@ -9,7 +9,7 @@ import Mailbox
 #endif
 
 /// Pocket voice. A hold this phone armed reads the next live `reply` through
-/// `POST /api/tts`. CarPlay keeps the notification card; nothing here speaks in the car.
+/// `POST /api/chat/tts?slug=<room>`. CarPlay keeps the notification card; nothing here speaks in the car.
 final class HelmVoice: NSObject {
   var onWords: ((String) -> Void)?
   var onPhase: ((SpeakPhase) -> Void)?
@@ -19,6 +19,8 @@ final class HelmVoice: NSObject {
   private let tts = TtsApi(transport: URLSessionTransport())
   private var armed = false
   private var utterance: Utterance?
+  /// Bumped by every speak and hush; a fetched clip plays only if its turn is still current.
+  private var speechTurn = 0
   #if canImport(Speech)
     private let engine = AVAudioEngine()
     private var request: SFSpeechAudioBufferRecognitionRequest?
@@ -32,7 +34,18 @@ final class HelmVoice: NSObject {
     armed = true
   }
 
-  func heard(frame: WireFrame, fresh: Bool, origin: String, bearer: String, lang: String) {
+  /// Reads the frame aloud when it is the live reply to a hold this phone armed.
+  ///
+  /// - Parameters:
+  ///   - frame: A mailbox frame, after `Mouth.ingest`.
+  ///   - fresh: Whether `Mouth.ingest` painted it as a new turn.
+  ///   - origin: The gantree HTTP origin.
+  ///   - slug: The room the frame arrived on; the Worker admits the speech request against it.
+  ///   - bearer: The session or spike sent as `Authorization`.
+  ///   - lang: The Settings language id the reply is spoken in.
+  func heard(
+    frame: WireFrame, fresh: Bool, origin: String, slug: String, bearer: String, lang: String
+  ) {
     if disarmsVoice(frame.kind) {
       armed = false
     }
@@ -40,10 +53,12 @@ final class HelmVoice: NSObject {
       return
     }
     armed = false
-    speak(frame.text ?? "", origin: origin, bearer: bearer, lang: lang)
+    speak(frame.text ?? "", origin: origin, slug: slug, bearer: bearer, lang: lang)
   }
 
+  /// Quiets the speaker before the mic opens, including a reply still being fetched.
   func hush() {
+    speechTurn += 1
     #if canImport(AVFoundation)
       player?.stop()
       player = nil
@@ -82,7 +97,11 @@ final class HelmVoice: NSObject {
     utterance = nil
   }
 
-  private func speak(_ markdown: String, origin: String, bearer: String, lang: String) {
+  /// Fetches the reply's speech for the room and plays it, unless a hush or a later reply came first.
+  private func speak(_ markdown: String, origin: String, slug: String, bearer: String, lang: String)
+  {
+    speechTurn += 1
+    let turn = speechTurn
     let text = clipForSpeech(speakable(markdown))
     if text.isEmpty {
       onPhase?(.idle)
@@ -90,8 +109,12 @@ final class HelmVoice: NSObject {
     }
     onPhase?(.fetching)
     DispatchQueue.global(qos: .userInitiated).async {
-      let got = self.tts.synthesize(origin: origin, bearer: bearer, text: text, lang: lang)
+      let got = self.tts.synthesize(
+        origin: origin, slug: slug, bearer: bearer, text: text, lang: lang)
       DispatchQueue.main.async {
+        guard turn == self.speechTurn else {
+          return
+        }
         switch got {
         case .err(let reason):
           self.onPhase?(.idle)
@@ -128,10 +151,20 @@ final class HelmVoice: NSObject {
   }
 
   #if canImport(Speech)
+    /// Opens the mic and streams it to the recognizer. The session switches to a recording
+    /// category first: after a spoken reply it is still in `.playback`, which has no input.
     private func startEngine(lang: String) {
       stopEngine()
       let recognizer = SFSpeechRecognizer(locale: Locale(identifier: speechLang(lang)))
       guard let recognizer, recognizer.isAvailable else {
+        onBlocked?()
+        return
+      }
+      do {
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
+        try session.setActive(true)
+      } catch {
         onBlocked?()
         return
       }
@@ -163,12 +196,14 @@ final class HelmVoice: NSObject {
     }
   #endif
 
+  /// Closes the mic and ends recognition. The tap comes off even when the engine never
+  /// started, since a second tap on the same bus is fatal.
   private func stopEngine() {
     #if canImport(Speech)
       if engine.isRunning {
         engine.stop()
-        engine.inputNode.removeTap(onBus: 0)
       }
+      engine.inputNode.removeTap(onBus: 0)
       request?.endAudio()
       task?.cancel()
       request = nil

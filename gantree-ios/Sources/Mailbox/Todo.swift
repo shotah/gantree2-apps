@@ -23,12 +23,17 @@ public struct TodoRow: Equatable, Identifiable {
   public var text: String
   /// Local `YYYY-MM-DD` last written. The phone computes the age.
   public var at: String
+  /// Wire `priority` when the crane sent `urgent` or `high`.
+  public var priority: TodoPriority?
 
-  public init(id: Int64, slug: String, text: String, at: String) {
+  public init(
+    id: Int64, slug: String, text: String, at: String, priority: TodoPriority? = nil
+  ) {
     self.id = id
     self.slug = slug
     self.text = text
     self.at = at
+    self.priority = priority
   }
 }
 
@@ -71,7 +76,15 @@ private func parseTodoRow(_ o: [String: Any]) -> TodoRow? {
   guard dateShape(at) else {
     return nil
   }
-  return TodoRow(id: id, slug: slug, text: capRunes(text, todoTextMax), at: at)
+  // Only the two keys the agent may send; anything else leaves the marker to say.
+  let wirePriority: TodoPriority?
+  switch JSON.string(o, "priority") {
+  case "urgent": wirePriority = .urgent
+  case "high": wirePriority = .high
+  default: wirePriority = nil
+  }
+  return TodoRow(
+    id: id, slug: slug, text: capRunes(text, todoTextMax), at: at, priority: wirePriority)
 }
 
 private func slugOk(_ s: String) -> Bool {
@@ -183,7 +196,10 @@ public func parseSeenTodo(_ raw: String?) -> [String: String] {
 }
 
 private func todoRowJson(_ row: TodoRow) -> String {
-  let arr: [Any] = [NSNumber(value: row.id), row.text, row.at]
+  var arr: [Any] = [NSNumber(value: row.id), row.text, row.at]
+  if let wirePriority = row.priority {
+    arr.append(wirePriority == .urgent ? "urgent" : "high")
+  }
   guard JSONSerialization.isValidJSONObject(arr),
     let data = try? JSONSerialization.data(withJSONObject: arr),
     let s = String(data: data, encoding: .utf8)
@@ -193,8 +209,7 @@ private func todoRowJson(_ row: TodoRow) -> String {
   return s
 }
 
-/// No wire change: the agent leads `text` with `!! ` (urgent) or `! ` (high).
-/// `text` stays raw — the seen badge keys on it — so these read it, not rewrite it.
+/// `!!` urgent, `!` high, bare words normal — marker in `text` or wire `priority`.
 public enum TodoPriority: Int, Equatable, CaseIterable {
   case urgent
   case high
@@ -203,6 +218,12 @@ public enum TodoPriority: Int, Equatable, CaseIterable {
 
 private let urgentMarker = "!! "
 private let highMarker = "! "
+
+/// A row's priority: the wire `priority` key when the agent sent one, else the marker
+/// leading its words, else normal.
+public func todoPriority(_ row: TodoRow) -> TodoPriority {
+  row.priority ?? todoPriority(row.text)
+}
 
 /// `!!!`, a glued `!!file`, or a bare `!!` are words, not a marker.
 public func todoPriority(_ text: String) -> TodoPriority {
@@ -244,7 +265,7 @@ public func todoPriorityLabel(_ priority: TodoPriority) -> String? {
 
 /// Urgent → high → rest; oldest first (the wire order) inside each rank.
 public func sortTodo(_ rows: [TodoRow]) -> [TodoRow] {
-  TodoPriority.allCases.flatMap { rank in rows.filter { todoPriority($0.text) == rank } }
+  TodoPriority.allCases.flatMap { rank in rows.filter { todoPriority($0) == rank } }
 }
 
 private func leadsWith(_ text: String, _ marker: String) -> Bool {

@@ -51,7 +51,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Holds the mailbox WebSocket after you open Cab so a locked phone can still take Kit's reply in Android Auto." />
+                android:value="Holds the mailbox WebSocket after you open gantree so a locked phone can still take Kit's reply in Android Auto." />
         </service>
 
         <service

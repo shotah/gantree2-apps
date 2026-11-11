@@ -85,7 +85,7 @@ Open it from Settings → Connected devices → Connection preferences →
 3. Lock the phone. The shade should show Kit's **message** card when
    something arrives — not a second "Listening for Kit" bubble.
 4. Settings → **Test car voice**. Expect a *kit* card in the shade
-   that starts "Car check from Cab". If Android settings opened
+   that starts "Car check from gantree". If Android settings opened
    instead, Cab found notifications off or the Kit category lowered —
    fix it there and tap again. This step proves notification
    permission and the Kit channel without a car.
@@ -97,7 +97,7 @@ Open it from Settings → Connected devices → Connection preferences →
    come up on the head unit — maps or the launcher, either is fine.
 2. Phone: Cab → Settings → **Test car voice**.
 3. You should get, in this order: a chime from the car speakers, a
-   **kit** card on the head unit, Auto reading *"Car check from Cab.
+   **kit** card on the head unit, Auto reading *"Car check from gantree.
    Android Auto is attached. If you hear this, Kit will be read
    aloud."*, then "Do you want to reply?". Say **yes** and say
    anything — that text lands in the Cab thread as your bubble and

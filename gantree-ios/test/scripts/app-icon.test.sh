@@ -6,7 +6,7 @@ root="$(cd "$(dirname "$0")/../.." && pwd)"
 logo="$root/assets/logo.svg"
 banner="$root/assets/banner.svg"
 iconset="$root/app/Helm/Assets.xcassets/AppIcon.appiconset"
-proj="$root/app/Helm.xcodeproj/project.pbxproj"
+proj="$root/app/gantree.xcodeproj/project.pbxproj"
 script="$root/scripts/app-icon.sh"
 src="$root/../shared/brand/ios"
 

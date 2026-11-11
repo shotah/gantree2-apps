@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gantree.cab.drive.CarRow
+import com.gantree.cab.mailbox.displaySlug
 
 private val CarBg = Color(0xFF121212)
 private val CarLine = Color(0xFF2A2A2A)
@@ -38,7 +39,7 @@ fun CabCarPane(
       .padding(horizontal = 48.dp, vertical = 28.dp),
     verticalArrangement = Arrangement.spacedBy(12.dp),
   ) {
-    Text(slug.ifBlank { "cab" }, color = CarAccent, fontSize = 28.sp, fontFamily = CabSans)
+    Text(displaySlug(slug), color = CarAccent, fontSize = 28.sp, fontFamily = CabSans)
     HorizontalDivider(color = CarLine)
     LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
       items(rows, key = { "${it.title}-${it.text}" }) { row ->

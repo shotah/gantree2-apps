@@ -9,7 +9,7 @@ enum class SpeakPhase { IDLE, FETCHING, PLAYING }
 /** Why a reply stayed silent. [EMPTY] (nothing speakable) is not worth a line. */
 enum class SpeakFail { EMPTY, OFFLINE, NO_VOICE, UNAUTHORIZED, BUSY, VENDOR, PLAY }
 
-/** `/api/tts` status → reason. 404 is the Worker not offering voice; 5xx is Google. */
+/** `/api/chat/tts` status → reason. 404 is the Worker not offering voice; 5xx is Google. */
 fun speakFailFromStatus(status: Int): SpeakFail = when (status) {
   404 -> SpeakFail.NO_VOICE
   401, 403 -> SpeakFail.UNAUTHORIZED

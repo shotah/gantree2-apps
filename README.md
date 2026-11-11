@@ -31,10 +31,8 @@ the agent's reply as a car-safe message card. Native chain:
 ## State
 
 The folders are `gantree-android/` and `gantree-ios/`. The wire, the
-shared theme, and the shared brand are in the tree. What still needs a
-Mac: rename the Xcode target, scheme, and project via
-`gantree-ios/app/project.yml` and `xcodegen generate`, then
-`make -C gantree-ios ios`. See [docs/todo.md](docs/todo.md).
+shared theme, and the shared brand are in the tree. Mac-only follow-ups
+live in [docs/todo.md](docs/todo.md).
 
 ## Shared theme
 

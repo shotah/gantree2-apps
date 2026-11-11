@@ -18,6 +18,16 @@ enum HelmGoogle {
     #endif
   }
 
+  /// Signs in with Google and trades the ID token for a gantree session.
+  ///
+  /// Call on the main thread. The nonce fetch and token exchange run on a background queue;
+  /// Google's sheet and `completion` run on the main thread.
+  ///
+  /// - Parameters:
+  ///   - webClientId: The web OAuth client the Worker verifies ID tokens against.
+  ///   - origin: The normalized gantree origin.
+  ///   - completion: The session, or why there is none. An `AuthError` keeps the token
+  ///     endpoint's status and body, so a 403 `not_allowed` can be shown without a session.
   static func signIn(
     webClientId: String,
     origin: String,
@@ -33,37 +43,37 @@ enum HelmGoogle {
         completion(.failure(GoogleNeedPresenter()))
         return
       }
-      guard let nonce = fetchNonce(origin: origin) else {
-        completion(.failure(GoogleNeedNonce()))
-        return
-      }
-      GIDSignIn.sharedInstance.configuration = GIDConfiguration(
-        clientID: ios,
-        serverClientID: webClientId
-      )
-      DispatchQueue.main.async {
-        GIDSignIn.sharedInstance.signIn(
-          withPresenting: vc,
-          hint: nil,
-          additionalScopes: nil,
-          nonce: nonce
-        ) { result, error in
-          if let error {
-            completion(.failure(error))
+      DispatchQueue.global(qos: .userInitiated).async {
+        let nonce = fetchNonce(origin: origin)
+        DispatchQueue.main.async {
+          guard let nonce else {
+            completion(.failure(GoogleNeedNonce()))
             return
           }
-          guard let token = result?.user.idToken?.tokenString else {
-            completion(.failure(GoogleNeedPackage()))
-            return
-          }
-          do {
-            completion(.success(try exchange(origin: origin, idToken: token, nonce: nonce)))
-          } catch let auth as AuthError {
-            // Keep the status and body. HelmModel stores no session and
-            // does not connect; 403 not_allowed only publishes sub/email.
-            completion(.failure(auth))
-          } catch {
-            completion(.failure(error))
+          GIDSignIn.sharedInstance.configuration = GIDConfiguration(
+            clientID: ios,
+            serverClientID: webClientId
+          )
+          GIDSignIn.sharedInstance.signIn(
+            withPresenting: vc,
+            hint: nil,
+            additionalScopes: nil,
+            nonce: nonce
+          ) { signedIn, error in
+            if let error {
+              completion(.failure(error))
+              return
+            }
+            guard let token = signedIn?.user.idToken?.tokenString else {
+              completion(.failure(GoogleNeedPackage()))
+              return
+            }
+            DispatchQueue.global(qos: .userInitiated).async {
+              let exchanged = Result { try exchange(origin: origin, idToken: token, nonce: nonce) }
+              DispatchQueue.main.async {
+                completion(exchanged)
+              }
+            }
           }
         }
       }

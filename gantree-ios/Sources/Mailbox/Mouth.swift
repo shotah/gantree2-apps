@@ -8,6 +8,12 @@ public let liveComposeKey = "kit-live"
 /// Phone TTL after the last typing frame. Agent refresh is ~4s.
 public let typingTtlMs: Int64 = 6_000
 
+/// A draft with no text change and no `typing` for this long is a ghost.
+public let draftTtlMs: Int64 = 60_000
+
+/// How often the app asks `Mouth.expireDraft()`.
+public let draftTickMs: Int64 = 15_000
+
 public func composeKey(_ line: ChatLine) -> String {
   line.live ? liveComposeKey : line.id
 }
@@ -91,6 +97,8 @@ public final class Mouth {
   public private(set) var typingUntil: Int64 = 0
   public private(set) var aims = AimsBoard()
   public private(set) var todo: [TodoRow] = []
+  /// Last draft text change or `typing`; what `expireDraft()` measures from.
+  private var draftLifeAt: Int64 = 0
   private let now: () -> Int64
 
   public init(now: @escaping () -> Int64 = { Int64(Date().timeIntervalSince1970 * 1000) }) {
@@ -209,7 +217,9 @@ public final class Mouth {
       return false
     }
     if frame.kind == "typing" {
-      typingUntil = now() + typingTtlMs
+      let heardAt = now()
+      typingUntil = heardAt + typingTtlMs
+      draftLifeAt = heardAt
       return false
     }
     if frame.kind == "draft" {
@@ -299,6 +309,18 @@ public final class Mouth {
     }
   }
 
+  /// Drops a draft the agent walked away from: `draftTtlMs` with no text change and no
+  /// `typing`. The mailbox re-sending the same held draft on connect is not life.
+  /// - Returns: true when a draft was dropped.
+  @discardableResult
+  public func expireDraft() -> Bool {
+    if !lines.contains(where: { $0.id == draftId }) || now() - draftLifeAt < draftTtlMs {
+      return false
+    }
+    dropDraft()
+    return true
+  }
+
   /// A mailbox `error` names the frame it refused when it can (`id`); older
   /// mailboxes and parse failures cannot, so fall back to your newest bubble
   /// still marked sending. Same rule as gantree `failInThread`.
@@ -328,6 +350,9 @@ public final class Mouth {
       return
     }
     let prev = lines.first { $0.id == draftId }
+    if prev == nil || prev?.text != text {
+      draftLifeAt = now()
+    }
     lines = capThread(
       placeInThread(
         rest,

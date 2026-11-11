@@ -3,7 +3,7 @@ package com.gantree.cab.mailbox
 /**
  * Settings → Language. One closed set for the mouth's ears and Kit's voice:
  * the BCP-47 the hold-to-talk recognizer listens in, and the id the Worker
- * swaps a Chirp 3 HD locale for on `POST /api/tts { text, lang }`. Not on the
+ * swaps a Chirp 3 HD locale for on `POST /api/chat/tts { text, lang }`. Not on the
  * mailbox wire — voice is mouth-local. Same ids, labels and tags as gantree
  * `lib/phone/lang.ts` (docs/frontends.md "Language"). Mandarin is `zh-CN` to a
  * recognizer but `cmn-CN` to Google TTS; the Worker owns that swap, so the

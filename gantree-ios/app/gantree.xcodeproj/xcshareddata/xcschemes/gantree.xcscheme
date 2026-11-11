@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A60000000000000000000001"
-               BuildableName = "Helm.app"
-               BlueprintName = "Helm"
-               ReferencedContainer = "container:Helm.xcodeproj">
+               BuildableName = "gantree.app"
+               BlueprintName = "gantree"
+               ReferencedContainer = "container:gantree.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -44,9 +44,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A60000000000000000000001"
-            BuildableName = "Helm.app"
-            BlueprintName = "Helm"
-            ReferencedContainer = "container:Helm.xcodeproj">
+            BuildableName = "gantree.app"
+            BlueprintName = "gantree"
+            ReferencedContainer = "container:gantree.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -61,9 +61,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A60000000000000000000001"
-            BuildableName = "Helm.app"
-            BlueprintName = "Helm"
-            ReferencedContainer = "container:Helm.xcodeproj">
+            BuildableName = "gantree.app"
+            BlueprintName = "gantree"
+            ReferencedContainer = "container:gantree.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

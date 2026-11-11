@@ -16,7 +16,7 @@ make ios             # xcodebuild (macOS)
 ```
 
 Needs Swift 5.9+ (`swift test`). CI uses Swift 6.3.3 and Node 24.
-Xcode: open `app/Helm.xcodeproj`, which depends on the local `Mailbox`
+Xcode: open `app/gantree.xcodeproj`, which depends on the local `Mailbox`
 package at the repo root. iOS 17+.
 
 ### Without a Mac
@@ -46,8 +46,8 @@ same idea as Cab gating the JVM mailbox.
 
 ## Publish (GitHub Release)
 
-This folder is its own git remote (like `gantree-android/`), not a path
-inside the gantree tree. `make release` refuses to tag a parent repo.
+Releases are cut from the repository root: one `VERSION` and one tag for
+both apps ([README](../../README.md)). Run these there, not in this folder.
 
 ```bash
 make release                 # patch

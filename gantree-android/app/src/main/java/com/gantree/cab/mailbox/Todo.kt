@@ -36,6 +36,8 @@ data class TodoRow(
   val text: String,
   /** Local `YYYY-MM-DD` last written. The phone computes the age. */
   val at: String,
+  /** [TodoPriority.URGENT] or [TodoPriority.HIGH] when the agent sent the `priority` key; null otherwise. */
+  val priority: TodoPriority? = null,
 )
 
 /** Whole frame → rows. Missing `todo` array is junk (null); `[]` is a real clear. */
@@ -58,6 +60,7 @@ fun parseTodo(o: JSONObject): List<TodoRow>? {
   }
 }
 
+/** One wire row → [TodoRow], keeping `priority` only when it is `urgent` or `high`; null when the row is bad. */
 internal fun parseTodoRow(o: JSONObject): TodoRow? {
   val id = jsonWholeNumber(o.opt("id")) ?: return null
   if (id <= 0) {
@@ -75,7 +78,13 @@ internal fun parseTodoRow(o: JSONObject): TodoRow? {
   if (!DATE_RE.matches(at)) {
     return null
   }
-  return TodoRow(id = id, slug = slug, text = capRunes(text, TODO_TEXT_MAX), at = at)
+  // Only the two keys the agent may send; `normal`, junk, or no key leaves the marker to say.
+  val priority = when (o.opt("priority")) {
+    "urgent" -> TodoPriority.URGENT
+    "high" -> TodoPriority.HIGH
+    else -> null
+  }
+  return TodoRow(id = id, slug = slug, text = capRunes(text, TODO_TEXT_MAX), at = at, priority = priority)
 }
 
 private fun collapseWhitespace(s: String): String =
@@ -89,10 +98,11 @@ private fun capRunes(s: String, max: Int): String {
 }
 
 /**
- * Priority is a marker leading the words — `!!` urgent, `!` high, none
- * normal (`"!! file the extension"`) — set by the agent (theirs, or its read
- * of the stakes). It rides inside `text`, so [TodoRow.text] keeps it (the
- * seen-badge keys on the raw words) and the sheet reads it out here.
+ * Priority is set by the agent (theirs, or its read of the stakes). It arrives
+ * as the row's `priority` key ([TodoRow.priority]), or as a marker leading the
+ * words — `!!` urgent, `!` high, none normal (`"!! file the extension"`). The
+ * marker rides inside `text`, so [TodoRow.text] keeps it (the seen-badge keys
+ * on the raw words) and the sheet reads it out here.
  */
 enum class TodoPriority(val rank: Int, val tag: String?) {
   URGENT(2, "urgent"),
@@ -109,11 +119,14 @@ fun todoPriority(text: String): TodoPriority = when (PRIORITY_RE.find(text)?.gro
   else -> TodoPriority.NORMAL
 }
 
+/** A row's priority: the `priority` key when the agent sent one, else the marker in the words, else normal. */
+fun todoPriority(row: TodoRow): TodoPriority = row.priority ?: todoPriority(row.text)
+
 /** The task without its marker; what the row paints. */
 fun todoWords(text: String): String = PRIORITY_RE.find(text)?.groupValues?.get(2) ?: text
 
 /** Urgent, then high, then the rest. Stable, so the frame's oldest-first order holds inside each rank. */
-fun sortTodo(rows: List<TodoRow>): List<TodoRow> = rows.sortedByDescending { todoPriority(it.text).rank }
+fun sortTodo(rows: List<TodoRow>): List<TodoRow> = rows.sortedByDescending { todoPriority(it).rank }
 
 /** Whole days since `at`; null when `at` does not parse or is in the future. */
 fun todoAgeDays(at: String, today: LocalDate): Long? {
@@ -168,8 +181,16 @@ fun encodeSeenTodo(seen: Map<String, String>): String = encodeSeenRows(seen)
 
 fun parseSeenTodo(raw: String?): Map<String, String> = parseSeenRows(raw) { SLUG_RE.matches(it) }
 
-internal fun todoRowJson(row: TodoRow): String =
-  JSONArray().put(row.id).put(row.text).put(row.at).toString()
+/**
+ * One row's seen fingerprint: `[id, text, at]`, plus the `priority` tag when the
+ * agent sent one, so a changed key counts as a changed task (the PWA fingerprints
+ * the whole row) and a row without the key keeps the fingerprint it always had.
+ */
+internal fun todoRowJson(row: TodoRow): String {
+  val fields = JSONArray().put(row.id).put(row.text).put(row.at)
+  row.priority?.tag?.let { fields.put(it) }
+  return fields.toString()
+}
 
 /**
  * A tick is local until the next `todo` frame settles it: a row that is gone

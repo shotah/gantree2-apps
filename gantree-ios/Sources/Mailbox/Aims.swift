@@ -7,9 +7,8 @@ public let aimsMax = 5
 public let aimDaysMax = 14
 public let aimWeeksMax = 13
 public let aimLinksMax = 3
-public let aimSentenceMax = 200
-
-private let aimNotes: Set<String> = ["nudged", "asked", "offered", "praised", "quiet", ""]
+public let aimSentenceMax = 240
+public let aimNoteMax = 32
 
 public struct AimDay: Equatable {
   public var day: String
@@ -178,10 +177,11 @@ func parseAim(_ o: [String: Any]) -> Aim? {
   if !aimAreaOk(area) {
     return nil
   }
-  var sentence = jsonText(o, "sentence").trimmingCharacters(in: .whitespacesAndNewlines)
-  if sentence.count > aimSentenceMax {
-    sentence = String(sentence.prefix(aimSentenceMax))
+  let sentenceRaw = jsonText(o, "sentence")
+  if sentenceRaw.count > aimSentenceMax {
+    return nil
   }
+  let sentence = sentenceRaw.trimmingCharacters(in: .whitespacesAndNewlines)
   if sentence.isEmpty {
     return nil
   }
@@ -191,10 +191,8 @@ func parseAim(_ o: [String: Any]) -> Aim? {
   guard let sum7 = jsonInt(o["sum7"]), let streak = jsonInt(o["streak"]) else {
     return nil
   }
-  let note = jsonText(o, "note").trimmingCharacters(in: .whitespacesAndNewlines)
-  if !aimNotes.contains(note) {
-    return nil
-  }
+  let noteRaw = jsonText(o, "note").trimmingCharacters(in: .whitespacesAndNewlines)
+  let note = noteRaw.count <= aimNoteMax ? noteRaw : ""
   guard let daysRaw = JSON.array(o["days"]) else {
     return nil
   }

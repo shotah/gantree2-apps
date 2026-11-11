@@ -125,7 +125,7 @@ fun allowlistCopy(email: String, sub: String): String =
   listOf(email, sub).map { it.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
 
 fun mailboxTimeoutHint(): String =
-  "Mailbox timed out — Android ended the background socket. Open Cab to listen again."
+  "Mailbox timed out — Android ended the background socket. Open gantree to listen again."
 
 /** No second handshake within this of the last open — a resume right after launch is not a gap. */
 const val SWEEP_MIN_GAP_MS = 10_000L

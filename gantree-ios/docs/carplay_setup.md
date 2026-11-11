@@ -33,7 +33,7 @@ Install first: [sideload_to_ios.md](sideload_to_ios.md).
 2. **Connect** (or send a line), then wait for the bar to say **Live**.
 3. Lock the phone.
 4. Settings → **Test car voice**. Expect a *kit* card that starts
-   "Car check from Helm".
+   "Car check from gantree".
 
 ## 3. Driveway
 
@@ -52,7 +52,7 @@ Install first: [sideload_to_ios.md](sideload_to_ios.md).
 | What you see | Why | Do |
 | --- | --- | --- |
 | Test card on the phone, nothing in the car | Announce notifications off; or CarPlay DND | §1 |
-| Card is a plain banner, no avatar, car never reads it | Signed with a free Personal Team. Communication Notifications is a paid Apple Developer Program capability; Helm posts a plain card until the profile carries it | Enroll, add the capability to the Helm target, Run again |
+| Card is a plain banner, no avatar, car never reads it | Signed with a free Personal Team. Communication Notifications is a paid Apple Developer Program capability; Helm posts a plain card until the profile carries it | Enroll, add the capability to the gantree target, Run again |
 | Card read, reply never reaches Kit | Helm not Live; reply is queued | Connect again |
 | Worked yesterday, silent today | Reboot / Force Quit — Helm does not relisten on boot | Open Helm, send a line, then drive |
 | Looking for a Helm tile in CarPlay | Expected | There is none for a sideload. See §0 |

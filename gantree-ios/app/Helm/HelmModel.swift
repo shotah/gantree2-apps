@@ -15,7 +15,7 @@ import UserNotifications
 final class HelmModel: ObservableObject {
   let mouth = Mouth()
   let prefs = HelmPrefs()
-  let seen = SeenCursor()
+  var seen = SeenCursor()
   private var outbox = Outbox()
   private var socket: MailboxSocket?
   private var cache: ThreadCache?
@@ -25,6 +25,7 @@ final class HelmModel: ObservableObject {
   private let net = HelmNet()
   private let voice = HelmVoice()
   private var sweepTimer: Timer?
+  private var draftTimer: Timer?
   private(set) var sampleShown = false
 
   @Published var origin: String
@@ -149,6 +150,7 @@ final class HelmModel: ObservableObject {
       refreshVoice()
     }
     startSweep()
+    startDraftTick()
   }
 
   var goalsChanged: Int {
@@ -213,6 +215,26 @@ final class HelmModel: ObservableObject {
     _ = socket?.sweep()
   }
 
+  /// Checks every `draftTickMs` for a half-written reply the agent walked away from.
+  func startDraftTick() {
+    draftTimer?.invalidate()
+    let seconds = TimeInterval(draftTickMs) / 1000
+    draftTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: true) { [weak self] _ in
+      Task { @MainActor in
+        self?.tickDraft()
+      }
+    }
+  }
+
+  /// Drops a draft bubble stale past `draftTtlMs` and repaints the thread when one goes.
+  /// A sample scene's draft is painted on purpose and stays.
+  func tickDraft() {
+    guard !sampleShown, mouth.expireDraft() else {
+      return
+    }
+    publish()
+  }
+
   func applyShotChrome(theme: String?, open: String?) {
     guard sampleShown else {
       return
@@ -240,10 +262,13 @@ final class HelmModel: ObservableObject {
     publish()
   }
 
+  /// Saves the Settings fields. The origin is normalized first, so a bare host or a pasted
+  /// socket URL becomes the HTTP origin every request and dial is built from.
   func persistFields() {
     if sampleShown {
       return
     }
+    origin = normalizeMailboxOrigin(origin)
     prefs.origin = origin
     prefs.slug = slug
     prefs.theme = themeId
@@ -289,8 +314,8 @@ final class HelmModel: ObservableObject {
             self?.mouth.setUp(up)
             if up {
               self?.mouth.setHint("Live")
+              self?.sendConnectAck()
               self?.flushOutbox()
-              self?.sendSeenIfWatching()
               self?.refreshVoice()
             } else {
               self?.mouth.setHint("Offline")
@@ -367,6 +392,46 @@ final class HelmModel: ObservableObject {
       return
     }
     _ = socket?.send(ackSeen())
+  }
+
+  /// Acks the read cursor once the socket is up, so the mailbox skips what this phone holds.
+  /// With the thread on screen the ack also says seen, which drops the person's cards on
+  /// their other devices; with no cursor yet that is a bare seen ack.
+  func sendConnectAck() {
+    let looking = watchingThread(phoneResumed: resumed, carThreadVisible: carThreadVisible)
+    if let since = seen.since() {
+      _ = socket?.send(ackSince(since, seen: looking))
+    } else if looking {
+      _ = socket?.send(ackSeen())
+    }
+  }
+
+  /// Switches to another agent's room from a Settings chip. Drops the old room's thread, boards,
+  /// look, read cursor, staged photo, and queued frames, loads the new room's cached thread, and
+  /// redials there. Picking the room already dialed changes nothing.
+  ///
+  /// - Parameter pick: The agent slug as listed for this account.
+  func pickAgent(_ pick: String) {
+    guard let room = parseSlug(pick) else {
+      return
+    }
+    slug = room
+    if room == socket?.room?.slug {
+      return
+    }
+    mouth.replace(lines: [], up: false, hint: "")
+    mouth.setAvatarRev(0)
+    faceJpeg = nil
+    backdropJpeg = nil
+    stagedPhoto = nil
+    seen = SeenCursor()
+    _ = outbox.popAll()
+    hydrateDisk()
+    connect()
+    if socket?.room?.slug != room {
+      // The dial was refused. The old room's socket must not paint into this thread.
+      socket?.stop()
+    }
   }
 
   func react(id: String, emoji: String) {
@@ -524,6 +589,7 @@ final class HelmModel: ObservableObject {
       frame: frame,
       fresh: painted,
       origin: origin,
+      slug: socket?.room?.slug ?? slug,
       bearer: bearer,
       lang: langId
     )
@@ -584,6 +650,29 @@ final class HelmModel: ObservableObject {
     publish()
   }
 
+  /// Runs Google sign-in against the saved, normalized origin. Ignores a second tap while one
+  /// is in flight; `signingIn` stays true until the session is applied or the attempt fails.
+  func signIn() {
+    if signingIn {
+      return
+    }
+    persistFields()
+    signingIn = true
+    HelmGoogle.signIn(webClientId: webClientId, origin: origin) { outcome in
+      switch outcome {
+      case .success(let session):
+        self.applyGoogle(session: session)
+      case .failure(let err):
+        self.signingIn = false
+        self.noteSignInFailure(err)
+      }
+    }
+  }
+
+  /// Stores the gantree session, then looks up the account's agents off the main thread and
+  /// connects. Ends the sign-in started by `signIn()`.
+  ///
+  /// - Parameter session: The session the token exchange returned.
   func applyGoogle(session: NativeSession) {
     prefs.session = session.token
     prefs.sessionExp = session.exp
@@ -592,20 +681,27 @@ final class HelmModel: ObservableObject {
     sub = session.sub
     spike = ""
     prefs.putSpike("", persistToDisk: false)
-    if let me = HelmGoogle.fetchMe(origin: origin, token: session.token) {
-      agents = me.agents
-      sub = me.sub
-      if let listed = me.email, !listed.isEmpty {
-        email = listed
-        prefs.email = listed
-      }
-      if !me.agents.isEmpty && !me.agents.contains(slug) {
-        slug = me.agents[0]
+    let origin = self.origin
+    DispatchQueue.global(qos: .userInitiated).async {
+      let me = HelmGoogle.fetchMe(origin: origin, token: session.token)
+      DispatchQueue.main.async {
+        if let me {
+          self.agents = me.agents
+          self.sub = me.sub
+          if let listed = me.email, !listed.isEmpty {
+            self.email = listed
+            self.prefs.email = listed
+          }
+          if !me.agents.isEmpty && !me.agents.contains(self.slug) {
+            self.slug = me.agents[0]
+          }
+        }
+        self.authHint = mailboxSignedInHint(email: self.email, agents: self.agents)
+        self.signingIn = false
+        self.publish()
+        self.connect()
       }
     }
-    authHint = mailboxSignedInHint(email: email, agents: agents)
-    publish()
-    connect()
   }
 
   /// Token POST failed, or Google itself failed. No session is stored.

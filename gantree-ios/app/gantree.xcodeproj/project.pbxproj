@@ -51,7 +51,7 @@
 		A10000000000000000000012 /* HelmVoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelmVoice.swift; sourceTree = "<group>"; };
 		A10000000000000000000013 /* HelmTasks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelmTasks.swift; sourceTree = "<group>"; };
 		A10000000000000000000014 /* HelmAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelmAvatar.swift; sourceTree = "<group>"; };
-		A10000000000000000000020 /* Helm.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Helm.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000020 /* gantree.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gantree.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000040 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -107,7 +107,7 @@
 		A40000000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000020 /* Helm.app */,
+				A10000000000000000000020 /* gantree.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -115,9 +115,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A60000000000000000000001 /* Helm */ = {
+		A60000000000000000000001 /* gantree */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A70000000000000000000003 /* Build configuration list for PBXNativeTarget "Helm" */;
+			buildConfigurationList = A70000000000000000000003 /* Build configuration list for PBXNativeTarget "gantree" */;
 			buildPhases = (
 				A50000000000000000000002 /* Sources */,
 				A50000000000000000000001 /* Frameworks */,
@@ -127,13 +127,13 @@
 			);
 			dependencies = (
 			);
-			name = Helm;
+			name = gantree;
 			packageProductDependencies = (
 				A30000000000000000000002 /* Mailbox */,
 				A30000000000000000000004 /* GoogleSignIn */,
 			);
-			productName = Helm;
-			productReference = A10000000000000000000020 /* Helm.app */;
+			productName = gantree;
+			productReference = A10000000000000000000020 /* gantree.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -146,7 +146,7 @@
 				LastSwiftUpdateCheck = 1500;
 				LastUpgradeCheck = 1500;
 			};
-			buildConfigurationList = A70000000000000000000006 /* Build configuration list for PBXProject "Helm" */;
+			buildConfigurationList = A70000000000000000000006 /* Build configuration list for PBXProject "gantree" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -163,7 +163,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A60000000000000000000001 /* Helm */,
+				A60000000000000000000001 /* gantree */,
 			);
 		};
 /* End PBXProject section */
@@ -250,7 +250,7 @@
 				);
 				MARKETING_VERSION = 0.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gantree.helm;
-				PRODUCT_NAME = Helm;
+				PRODUCT_NAME = gantree;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -274,7 +274,7 @@
 				);
 				MARKETING_VERSION = 0.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gantree.helm;
-				PRODUCT_NAME = Helm;
+				PRODUCT_NAME = gantree;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -283,7 +283,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A70000000000000000000003 /* Build configuration list for PBXNativeTarget "Helm" */ = {
+		A70000000000000000000003 /* Build configuration list for PBXNativeTarget "gantree" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A70000000000000000000004 /* Debug */,
@@ -292,7 +292,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A70000000000000000000006 /* Build configuration list for PBXProject "Helm" */ = {
+		A70000000000000000000006 /* Build configuration list for PBXProject "gantree" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A70000000000000000000001 /* Debug */,

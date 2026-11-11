@@ -135,6 +135,30 @@ final class TodoTests: XCTestCase {
     XCTAssertNil(todoPriorityLabel(.normal))
   }
 
+  func testWirePriorityOverridesTheMarkerAndJunkKeysDrop() {
+    let raw = #"""
+      {"todo":[
+        {"id":1,"slug":"a","text":"plain","at":"2026-09-01","priority":"urgent"},
+        {"id":2,"slug":"b","text":"!! looks urgent","at":"2026-09-02","priority":"high"},
+        {"id":3,"slug":"c","text":"still","at":"2026-09-03","priority":"p3"}
+      ]}
+      """#
+    let rows = parseTodo(JSON.object(raw)!)!
+    XCTAssertEqual(.urgent, rows[0].priority)
+    XCTAssertEqual(.urgent, todoPriority(rows[0]))
+    XCTAssertEqual(.high, rows[1].priority)
+    XCTAssertEqual(.high, todoPriority(rows[1]))
+    XCTAssertNil(rows[2].priority)
+    XCTAssertEqual(.normal, todoPriority(rows[2]))
+    XCTAssertEqual([1, 2, 3], sortTodo(rows).map(\.id))
+    let seen = seenTodo(rows)
+    let reprioritized = rows.map { row in
+      row.slug == "a"
+        ? TodoRow(id: row.id, slug: row.slug, text: row.text, at: row.at, priority: .high) : row
+    }
+    XCTAssertEqual(1, changedTodo(reprioritized, seen: seen))
+  }
+
   func testSortIsUrgentThenHighThenRestOldestFirstInsideEachRank() {
     let rows = [
       TodoRow(id: 1, slug: "a", text: "plain one", at: "2026-09-01"),

@@ -48,7 +48,7 @@ struct HelmTasks: View {
 
   private func taskRow(_ row: TodoRow, today: String, colors: HelmColors) -> some View {
     let done = ticked.contains(row.id)
-    let priority = todoPriority(row.text)
+    let priority = todoPriority(row)
     return HStack(alignment: .center, spacing: 8) {
       Button {
         guard canTick(id: row.id, ticked: ticked) else {

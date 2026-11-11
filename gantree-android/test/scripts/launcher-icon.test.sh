@@ -27,10 +27,21 @@ grep -q 'fillColor="#F07848"' "$fg" || {
   exit 1
 }
 
-grep -q '<monochrome android:drawable="@drawable/ic_launcher_foreground"' "$icon" || {
+grep -q '<monochrome android:drawable="@drawable/ic_launcher_monochrome"' "$icon" || {
   echo "FAIL: adaptive icon should declare a monochrome layer" >&2
   exit 1
 }
+
+# The notification small icon is the tree mark in opaque white, not the old bell.
+stat="$root/app/src/main/res/drawable/ic_stat_cab.xml"
+grep -q 'android:pathData="M7057 12760 c-24 -63 -80 -139' "$stat" || {
+  echo "FAIL: ic_stat_cab.xml should carry the traced tree path from assets/logo.svg" >&2
+  exit 1
+}
+if grep -Eq 'M9,3h6v2H9z|Color="#(F07848|F4F0EA)"|Alpha=' "$stat"; then
+  echo "FAIL: ic_stat_cab.xml should be one opaque white silhouette, not the bell or colour" >&2
+  exit 1
+fi
 
 "$root/scripts/launcher-icon.sh"
 "$root/scripts/launcher-icon.sh"

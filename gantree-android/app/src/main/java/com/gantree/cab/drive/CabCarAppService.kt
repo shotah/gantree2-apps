@@ -24,6 +24,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.gantree.cab.BuildConfig
 import com.gantree.cab.CabApp
+import com.gantree.cab.mailbox.displaySlug
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -92,9 +93,11 @@ class CabThreadScreen(carContext: CarContext) : Screen(carContext) {
     }
   }
 
+  /** The room in prefs as one Auto conversation, titled with the name the phone header shows. */
   override fun onGetTemplate(): Template {
     val app = carContext.applicationContext as CabApp
-    val slug = app.prefs.slug.ifBlank { "cab" }
+    val slug = app.prefs.slug
+    val title = displaySlug(slug)
     val kit = kitPerson(slug, kitFaceIcon(app.face))
     // Never empty: the starter card carries Reply, so the first turn can be spoken from the car.
     val messages = carMessages(app.mouth.lines.value, slug, System.currentTimeMillis()).map { turn ->
@@ -108,7 +111,7 @@ class CabThreadScreen(carContext: CarContext) : Screen(carContext) {
     }
     val conversation = ConversationItem.Builder(
       CabNotifier.conversationId(slug),
-      CarText.create(slug),
+      CarText.create(title),
       you,
       messages,
       conversationCallback,
@@ -118,7 +121,7 @@ class CabThreadScreen(carContext: CarContext) : Screen(carContext) {
       .setHeader(
         Header.Builder()
           .setStartHeaderAction(Action.APP_ICON)
-          .setTitle(slug)
+          .setTitle(title)
           .build(),
       )
       .setSingleList(ItemList.Builder().addItem(conversation.build()).build())

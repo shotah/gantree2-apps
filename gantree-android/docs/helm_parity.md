@@ -79,7 +79,7 @@ stays open, add and Full list close, CarPlay shows nothing),
 read-only), `seen` on ack (connect with the thread up, and each live
 `reply` / `push`; a sibling inbound or a seen ack drops the local
 card), pocket voice (header mic when config says `voice`, hold bar,
-`SFSpeechRecognizer`, `POST /api/tts` with `lang`), Settings →
+`SFSpeechRecognizer`, `POST /api/chat/tts?slug=` with `lang`), Settings →
 Language (the same four ids, only when voice is published).
 
 ## Not Helm's to do

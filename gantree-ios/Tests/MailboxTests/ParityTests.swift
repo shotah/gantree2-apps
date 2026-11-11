@@ -198,19 +198,44 @@ final class ParityTests: XCTestCase {
     let api = TtsApi(transport: http)
     guard
       case .ok(let bytes) = api.synthesize(
-        origin: "http://mailbox.test/", bearer: "jwe", text: "hi", lang: "ja")
+        origin: "http://mailbox.test/", slug: "dock", bearer: "jwe", text: "hi", lang: "ja")
     else {
       return XCTFail("expected mp3")
     }
     XCTAssertEqual(2, bytes.count)
-    XCTAssertEqual("/api/tts", http.requests[0].url?.path)
+    XCTAssertEqual("/api/chat/tts", http.requests[0].url?.path)
+    let slugItem = URLComponents(url: http.requests[0].url!, resolvingAgainstBaseURL: false)?
+      .queryItems?.first { $0.name == "slug" }
+    XCTAssertEqual("dock", slugItem?.value)
+    XCTAssertEqual(
+      "http://mailbox.test/api/chat/tts?slug=dock", ttsUrl("http://mailbox.test/", slug: "dock"))
     let body = String(data: http.requests[0].httpBody ?? Data(), encoding: .utf8) ?? ""
     XCTAssertTrue(body.contains("hi"))
     XCTAssertTrue(body.contains("ja"))
     XCTAssertEqual("Bearer jwe", http.requests[0].value(forHTTPHeaderField: "Authorization"))
     http.queue = [HTTPResult(status: 404, body: Data())]
     XCTAssertEqual(
-      .err(.noVoice), api.synthesize(origin: "http://mailbox.test/", bearer: "jwe", text: "hi"))
+      .err(.noVoice),
+      api.synthesize(origin: "http://mailbox.test/", slug: "dock", bearer: "jwe", text: "hi"))
+  }
+
+  func testAimKeepsAnyNoteUpTo32CharactersAndSentenceUpTo240() {
+    let note = String(repeating: "x", count: 32)
+    let sentence = String(repeating: "a", count: 240)
+    let raw = #"""
+      {"kind":"aims","aims":[{"area":"training","sentence":"\#(sentence)","rating30":0,"sum7":0,"streak":0,"note":"\#(note)","days":[]}]}
+      """#
+    let aim = parseAims(JSON.object(raw)!)!.aims[0]
+    XCTAssertEqual(note, aim.note)
+    XCTAssertEqual(sentence, aim.sentence)
+    let longNote = #"""
+      {"kind":"aims","aims":[{"area":"sleep","sentence":"Rest.","rating30":0,"sum7":0,"streak":0,"note":"\#(String(repeating: "n", count: 33))","days":[]}]}
+      """#
+    XCTAssertEqual("", parseAims(JSON.object(longNote)!)!.aims[0].note)
+    let custom = #"""
+      {"kind":"aims","aims":[{"area":"fuel","sentence":"Eat.","rating30":0,"sum7":0,"streak":0,"note":"custom poke","days":[]}]}
+      """#
+    XCTAssertEqual("custom poke", parseAims(JSON.object(custom)!)!.aims[0].note)
   }
 
   func testConfigReadsVoice() {

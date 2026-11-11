@@ -65,7 +65,7 @@ letting another app read the thread are the failures that matter.
       live `reply` / `push`, send `ack` `seen: true`. A sibling
       inbound or a seen ack drops the local card.
 - [x] **Pocket voice.** Header mic when config says `voice`. Hold
-      bar, `SFSpeechRecognizer` in the Language locale, `POST /api/tts`
+      bar, `SFSpeechRecognizer` in the Language locale, `POST /api/chat/tts?slug=`
       with `lang`. Settings → Language is the same four ids.
 - [x] **`todo` board.** Parse with the 100 / 240 caps. Not a turn.
       Header check-square badges changes since the sheet was open
@@ -133,7 +133,7 @@ Enrollment facts, from [developer.apple.com/programs/enroll](https://developer.a
 - The paid team is a new signing identity. Uninstall Helm from each
   device before the first Run on it, as the sideload doc already says.
 
-- [ ] **Communication Notifications capability** on the Helm target.
+- [ ] **Communication Notifications capability** on the gantree target.
       Lights up the `INSendMessageIntent` card: Kit avatar, promoted
       in Notification Center, CarPlay reads it aloud. Everything in
       [carplay_setup.md](carplay_setup.md) past the plain banner waits

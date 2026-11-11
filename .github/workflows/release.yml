@@ -137,8 +137,8 @@ jobs:
             reversed="com.googleusercontent.apps.${ios_id%"$suffix"}"
           fi
           xcodebuild \
-            -project gantree-ios/app/Helm.xcodeproj \
-            -scheme Helm \
+            -project gantree-ios/app/gantree.xcodeproj \
+            -scheme gantree \
             -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO \
             "HELM_MAILBOX_ORIGIN=${HELM_MAILBOX_ORIGIN:-}" \

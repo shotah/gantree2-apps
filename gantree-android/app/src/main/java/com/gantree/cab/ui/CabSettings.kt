@@ -232,7 +232,7 @@ fun CabSettings(
       onClick = if (permits.notify) null else onNotifyAsk,
     )
     if (voiceOffered) {
-      // Gantree Settings → Language. Only the mouth: recognizer locale + `/api/tts` `lang`.
+      // Gantree Settings → Language. Only the mouth: recognizer locale + `/api/chat/tts` `lang`.
       SettingsPick(
         label = "Language",
         ids = LANG_IDS,
@@ -318,7 +318,7 @@ fun CabSettings(
     Text(
       "Kit arrives as a message card that Auto reads aloud; tap the card to reply by voice. " +
         "Needs Android Auto → Developer settings → Unknown sources. " +
-        "Open Cab in the car and tap Reply on the first card to start talking, or open Cab here " +
+        "Open gantree in the car and tap Reply on the first card to start talking, or open gantree here " +
         "before you drive and lock the phone. Plug in, then tap Test to hear a check message.",
       style = MaterialTheme.typography.bodySmall,
       color = scheme.onSurfaceVariant,

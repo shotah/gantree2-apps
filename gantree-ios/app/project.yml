@@ -1,4 +1,4 @@
-name: Helm
+name: gantree
 options:
   bundleIdPrefix: com.gantree
   deploymentTarget:
@@ -11,7 +11,7 @@ packages:
     url: https://github.com/google/GoogleSignIn-iOS
     from: 9.2.0
 targets:
-  Helm:
+  gantree:
     type: application
     platform: iOS
     sources:
@@ -21,7 +21,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.gantree.helm
-        PRODUCT_NAME: Helm
+        PRODUCT_NAME: gantree
         MARKETING_VERSION: "0.0.1"
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.9"

@@ -58,8 +58,8 @@ xcrun simctl bootstatus "$udid" -b >/dev/null
 
 echo "building Helm (Debug, unsigned)"
 xcodebuild \
-  -project "$root/app/Helm.xcodeproj" \
-  -scheme Helm \
+  -project "$root/app/gantree.xcodeproj" \
+  -scheme gantree \
   -configuration Debug \
   -destination "id=$udid" \
   -derivedDataPath "$root/DerivedData" \
@@ -67,9 +67,9 @@ xcodebuild \
   ONLY_ACTIVE_ARCH=YES \
   build
 
-app="$(find "$root/DerivedData/Build/Products" -path '*iphonesimulator*' -name 'Helm.app' -type d | head -1)"
+app="$(find "$root/DerivedData/Build/Products" -path '*iphonesimulator*' -name 'gantree.app' -type d | head -1)"
 if [[ -z "$app" ]]; then
-  echo "Helm.app not in DerivedData" >&2
+  echo "gantree.app not in DerivedData" >&2
   exit 1
 fi
 

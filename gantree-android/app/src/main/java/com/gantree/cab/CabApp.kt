@@ -11,6 +11,7 @@ import com.gantree.cab.mailbox.ThemeApi
 import com.gantree.cab.mailbox.TtsApi
 import com.gantree.cab.mailbox.WireFrame
 import com.gantree.cab.mailbox.inbound
+import com.gantree.cab.mailbox.parseSlug
 import com.gantree.cab.mailbox.shouldSpeak
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,12 +57,20 @@ class CabApp : Application() {
   @Volatile
   private var threadRoom: ThreadRoom? = null
 
+  /** Wires prefs, caches, and Kit's voice to the room in prefs, then paints its last thread. */
   override fun onCreate() {
     super.onCreate()
     prefs = CabPrefs(this)
     avatar = AvatarApi(cache = BlobCache(File(cacheDir, "blobs")))
     thread = ThreadCache(File(cacheDir, "thread.json"))
-    voice = KitVoice(TtsApi(), { prefs.origin }, { prefs.bearer }, mouth::setHint, { prefs.lang })
+    voice = KitVoice(
+      TtsApi(),
+      { prefs.origin },
+      { parseSlug(prefs.slug).orEmpty() },
+      { prefs.bearer },
+      mouth::setHint,
+      { prefs.lang },
+    )
     // Paint what we knew last time before any socket or GET answers.
     mouth.setRoomTheme(prefs.roomTheme(prefs.slug))
     openThread()

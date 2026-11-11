@@ -116,7 +116,7 @@ grep -q 'avatarSheetActions' "$root/app/Helm/HelmAvatar.swift" || {
   echo "FAIL: avatar sheet rows come from avatarSheetActions" >&2
   exit 1
 }
-grep -q 'HelmAvatar.swift' "$root/app/Helm.xcodeproj/project.pbxproj" || {
+grep -q 'HelmAvatar.swift' "$root/app/gantree.xcodeproj/project.pbxproj" || {
   echo "FAIL: HelmAvatar.swift must be on the Xcode target" >&2
   exit 1
 }

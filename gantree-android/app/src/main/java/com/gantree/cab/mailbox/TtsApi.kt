@@ -13,11 +13,18 @@ sealed class TtsResult {
   data class Err(val reason: SpeakFail) : TtsResult()
 }
 
-fun ttsUrl(origin: String): String = httpOrigin(origin) + "/api/tts"
+/**
+ * Kit's voice route for one room.
+ *
+ * @param origin Worker origin as stored in prefs; trimmed and stripped of a trailing slash.
+ * @param slug Room slug, already parsed; the Worker answers 400 `bad slug` without it.
+ * @return `<http origin>/api/chat/tts?slug=<slug>`.
+ */
+fun ttsUrl(origin: String, slug: String): String = "${httpOrigin(origin)}/api/chat/tts?slug=$slug"
 
 /**
- * `POST /api/tts { text, lang }` → MP3 bytes. The same Worker route the PWA
- * plays through; the phone sends its Bearer session instead of the cookie.
+ * `POST /api/chat/tts?slug=<room> { text, lang }` → MP3 bytes. The same Worker route
+ * the PWA plays through; the phone sends its Bearer session instead of the cookie.
  * `lang` is the Settings → Language id (`en` / `ja` / `zh` / `vi`); the Worker keeps
  * the speaker and swaps the Chirp locale, and drops an id it does not know.
  * 404 until the Worker has a Chirp key (or `VOICE=off`), 401 when the session
@@ -30,9 +37,19 @@ class TtsApi(
     .readTimeout(30, TimeUnit.SECONDS)
     .build(),
 ) {
-  fun synthesize(origin: String, bearer: String, text: String, lang: String = DEFAULT_LANG): TtsResult {
+  /**
+   * Speak [text] in the [slug] room.
+   *
+   * @param origin Worker origin.
+   * @param slug Room the reply belongs to; the Worker admits the caller to it.
+   * @param bearer Session or spike secret; blank sends no `Authorization`.
+   * @param text Speakable words, already stripped of markdown and clipped.
+   * @param lang Settings → Language id; junk is sent as the default.
+   * @return The MP3 bytes, or why the reply stays silent. Never throws for a network failure.
+   */
+  fun synthesize(origin: String, slug: String, bearer: String, text: String, lang: String = DEFAULT_LANG): TtsResult {
     val body = JSONObject().put("text", text).put("lang", parseLang(lang)).toString().toRequestBody(JSON)
-    val req = Request.Builder().url(ttsUrl(origin)).post(body)
+    val req = Request.Builder().url(ttsUrl(origin, slug)).post(body)
     if (bearer.isNotBlank()) {
       req.header("Authorization", "Bearer $bearer")
     }

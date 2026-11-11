@@ -40,10 +40,10 @@ tree).
 
 ## Publish (GitHub Release)
 
-This folder is its own git remote (like `repos/ai-gantry`), not a
-path inside the gantree tree. `make release` refuses to tag a parent
-repo. Same loop as ai-gantry: bump `VERSION`, commit, tag `v*` +
-floating `latest`, push. The Release workflow builds the APK, attaches `gantree-android-<version>.apk`,
+Releases are cut from the repository root: one `VERSION` and one tag for
+both apps ([README](../../README.md)). Run the commands below there, not
+in this folder. They bump `VERSION`, commit, tag `v*` + floating
+`latest`, and push. The Release workflow builds the APK, attaches `gantree-android-<version>.apk`,
 and puts the **signing-cert SHA-1** in the release notes (plus a
 `gantree-android-<version>-sha1.txt` asset). That fingerprint is what
 Google’s Android OAuth client wants — not the SHA-256 checksum next

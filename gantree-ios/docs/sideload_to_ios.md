@@ -69,14 +69,17 @@ and that xcconfig out of git.
 
 ## 5. Run on the phone
 
-1. Open `app/Helm.xcodeproj`.
-2. The Helm target → **Signing & Capabilities**. Team is your Apple
+1. Open `app/gantree.xcodeproj`.
+2. **Xcode → Settings → Accounts**. Add your Apple ID if it is not
+   listed. Without an account Xcode has no team and cannot make the
+   signing profile.
+3. The gantree target → **Signing & Capabilities**. Team is your Apple
    ID. **Automatically manage signing** stays on. Bundle id stays
    `com.gantree.helm`.
-3. A free Apple ID is enough. That profile lasts about seven days;
+4. A free Apple ID is enough. That profile lasts about seven days;
    Run again from Xcode when it expires.
-4. The destination is your iPhone, not a Simulator.
-5. Press Run.
+5. The destination is your iPhone, not a Simulator.
+6. Press Run.
 
 Xcode registers the phone with your Apple ID on that Run.
 

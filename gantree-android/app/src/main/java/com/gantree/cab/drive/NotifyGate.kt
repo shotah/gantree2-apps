@@ -47,7 +47,7 @@ fun carTestBlocked(notificationsEnabled: Boolean, channelImportance: Int?): Bool
  */
 fun carCheckText(carAttached: Boolean): String =
   if (carAttached) {
-    "Car check from Cab. Android Auto is attached. If you hear this, Kit will be read aloud."
+    "Car check from gantree. Android Auto is attached. If you hear this, Kit will be read aloud."
   } else {
-    "Car check from Cab. The phone does not see Android Auto. Plug into the car, then tap Test again."
+    "Car check from gantree. The phone does not see Android Auto. Plug into the car, then tap Test again."
   }

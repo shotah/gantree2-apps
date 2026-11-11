@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 data class AuthConfig(
   val mode: String?,
   val google: Boolean,
-  /** Additive: the Worker publishes pocket voice (header mic + `/api/tts`). Missing → false. */
+  /** Additive: the Worker publishes pocket voice (header mic + `/api/chat/tts`). Missing → false. */
   val voice: Boolean = false,
 )
 
