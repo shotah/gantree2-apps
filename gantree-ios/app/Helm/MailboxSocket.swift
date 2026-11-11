@@ -11,8 +11,7 @@ final class MailboxSocket: NSObject, URLSessionWebSocketDelegate {
   private var stopped = true
   private var attempt = 0
   private var openedAt: Int64 = 0
-  /// The room last started. Its slug is the room a heard reply belongs to.
-  private(set) var room: (origin: String, slug: String, bearer: String)?
+  private var room: (origin: String, slug: String, bearer: String)?
   private var retrying = false
   private var authLost = false
   private var generation = 0
@@ -35,12 +34,13 @@ final class MailboxSocket: NSObject, URLSessionWebSocketDelegate {
     connect(origin: origin, slug: slug, bearer: bearer)
   }
 
+  /// Ends the socket and stops redialing. Reports no state: the caller decides what the
+  /// screen says, and a late "down" would overwrite it.
   func stop() {
     stopped = true
     generation += 1
     task?.cancel(with: .goingAway, reason: nil)
     task = nil
-    onState(false)
   }
 
   @discardableResult

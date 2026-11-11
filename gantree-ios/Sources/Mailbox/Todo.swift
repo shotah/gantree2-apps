@@ -23,7 +23,7 @@ public struct TodoRow: Equatable, Identifiable {
   public var text: String
   /// Local `YYYY-MM-DD` last written. The phone computes the age.
   public var at: String
-  /// Wire `priority` when the crane sent `urgent` or `high`.
+  /// The wire `priority` key when the agent sent `urgent` or `high`; nil otherwise.
   public var priority: TodoPriority?
 
   public init(

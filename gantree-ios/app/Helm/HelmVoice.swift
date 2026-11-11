@@ -25,6 +25,8 @@ final class HelmVoice: NSObject {
     private let engine = AVAudioEngine()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
+    /// Whether the mic tap is on the input bus. A second tap, or removing a missing one, is fatal.
+    private var isTapInstalled = false
   #endif
   #if canImport(AVFoundation)
     private var player: AVAudioPlayer?
@@ -162,20 +164,26 @@ final class HelmVoice: NSObject {
       }
       do {
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
+        try session.setCategory(.record, mode: .measurement)
         try session.setActive(true)
       } catch {
+        onBlocked?()
+        return
+      }
+      let input = engine.inputNode
+      let format = input.outputFormat(forBus: 0)
+      // No usable mic reports a zero format, and a tap in that format is fatal.
+      guard format.sampleRate > 0, format.channelCount > 0 else {
         onBlocked?()
         return
       }
       let request = SFSpeechAudioBufferRecognitionRequest()
       request.shouldReportPartialResults = true
       self.request = request
-      let input = engine.inputNode
-      let format = input.outputFormat(forBus: 0)
       input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
         request.append(buffer)
       }
+      isTapInstalled = true
       engine.prepare()
       do {
         try engine.start()
@@ -196,14 +204,17 @@ final class HelmVoice: NSObject {
     }
   #endif
 
-  /// Closes the mic and ends recognition. The tap comes off even when the engine never
-  /// started, since a second tap on the same bus is fatal.
+  /// Closes the mic and ends recognition. An installed tap comes off even when the engine
+  /// never started, so the next hold can install its own.
   private func stopEngine() {
     #if canImport(Speech)
       if engine.isRunning {
         engine.stop()
       }
-      engine.inputNode.removeTap(onBus: 0)
+      if isTapInstalled {
+        engine.inputNode.removeTap(onBus: 0)
+        isTapInstalled = false
+      }
       request?.endAudio()
       task?.cancel()
       request = nil

@@ -27,7 +27,7 @@ Wire names were fixed in gantree on 2026-10-10 (see its
 - [x] Copy the two apps into `gantree-android/` and `gantree-ios/`, no `.git`,
       no build output, no `.env` / `local.properties`.
 - [x] `shared/theme/` generated from gantree.
-- [ ] `git init`, remote `shotah/gantree2-apps`, first push. **Owner
+- [x] `git init`, remote `shotah/gantree2-apps`, first push. **Owner
       does this**; agents do not run git here.
 - [x] Root `.gitignore` = union of the two apps' ignores, scoped per
       folder where the pattern is folder-specific. `shared/**` is
@@ -62,16 +62,18 @@ cutover, so these can ship before or after.
 - [x] `/api/auth/me`: read `agents`; fall back to `cranes` while the
       alias exists (2026-10-11). gantree-android `AuthApi.kt` +
       `CabViewModel`; gantree-ios `Auth.swift`.
-- [ ] Socket path stays `/ws/<slug>`; the slug is an **agent** slug.
-      Rename variables, strings, and tests (`crane` → `agent`).
-- [ ] Settings copy: "pendant Worker host" → "gantree origin";
+- [x] Socket path stays `/ws/<slug>`; the slug is an **agent** slug.
+      Rename variables, strings, and tests (`crane` → `agent`). What is
+      left is the Worker's own wire: `?role=crane`, its `q:crane:<id>`
+      queue key, and the `cranes` alias.
+- [x] Settings copy: "pendant Worker host" → "gantree origin";
       `PENDANT_MAILBOX_URL` / `PENDANT_BEARER` mentions → `CHAT_*`
       (gantree-android `CabSettings.kt` ~L135–184; gantree-ios `Look.swift` / settings
       view).
-- [ ] Storage keys on the phone: `pendant.*` prefs → `gantree.*`, with
-      a one-time migration read of the old key.
-- [ ] `MAILBOX_SECRET` lab bypass: keep the mechanism, rename to what
-      gantree's chat DO exposes. Decide with gantree §3.
+- [x] Storage keys on the phone: prefs live in a `gantree` store, with
+      a one-time migration read of the old `cab` / `helm` stores.
+- [x] `MAILBOX_SECRET` lab bypass: keep the mechanism, rename to what
+      gantree's chat DO exposes (`CHAT_SECRET`).
 - [ ] Tests: `Wire*Tests` fixtures regenerated from gantree's
       `test/chat/*` fixtures so both phones parse exactly what the
       Worker writes. One fixture folder in gantree, copied here by a
@@ -79,16 +81,16 @@ cutover, so these can ship before or after.
 
 ## 3. Shared theme
 
-- [ ] gantree-android: delete the fifteen `*Colors()` functions in
+- [x] gantree-android: delete the fifteen `*Colors()` functions in
       `ui/CabPalette.kt`; `cabColors(id)` maps `GantreeThemes.of(id)`
       → `CabColors`. Add `shared/theme/GantreeThemes.kt` as a Gradle
       `srcDir` (no copy).
-- [ ] gantree-ios: same for `Sources/Mailbox/Palette.swift`; add
+- [x] gantree-ios: same for `Sources/Mailbox/Palette.swift`; add
       `shared/theme/GantreeThemes.swift` to the `Mailbox` target via a
       symlink or SwiftPM `path:` entry.
-- [ ] `parseTheme` in both apps → `GantreeThemes.of(...)`. Delete the
+- [x] `parseTheme` in both apps → `GantreeThemes.of(...)`. Delete the
       hard-coded id lists.
-- [ ] Both apps' theme tests assert against `shared/theme/tokens.json`
+- [x] Both apps' theme tests assert against `shared/theme/tokens.json`
       rather than literal hexes, so the test moves when the catalog
       moves.
 - [ ] `followTheme` / room theme from the Worker (`gantree.roomTheme`)
@@ -103,14 +105,16 @@ into each launcher is in-folder:
 `gantree-android/scripts/launcher-icon.sh`,
 `gantree-ios/scripts/app-icon.sh`.
 
-- [ ] App name "gantree" on both launchers; bundle ids
+- [x] App name "gantree" on both launchers; bundle ids
       `com.gantree.cab` / `com.gantree.helm` stay (already correct).
-- [ ] Adaptive icon (Android) and asset catalog (iOS) from the tree
+- [x] Adaptive icon (Android) and asset catalog (iOS) from the tree
       mark: foreground SVG → PNG set via a script in gantree
-      `scripts/`, outputs copied here.
+      `scripts/`, outputs copied here. The Android adaptive foreground,
+      status-bar icon, and themed-icon layer are the same mark kept as
+      hand-drawn vectors.
 - [ ] Splash: canvas color from `boom.canvas`, mark centered. Same
       spec on both.
-- [ ] `assets/banner.svg` and `assets/logo.svg` in each folder
+- [x] `assets/banner.svg` and `assets/logo.svg` in each folder
       replaced; READMEs' first line rewritten without the old product
       copy.
 - [ ] Android Auto / CarPlay card icon = the mark on `accent`.

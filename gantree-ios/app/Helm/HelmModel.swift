@@ -19,6 +19,8 @@ final class HelmModel: ObservableObject {
   private var outbox = Outbox()
   private var socket: MailboxSocket?
   private var cache: ThreadCache?
+  /// The room whose thread, boards, and read cursor are on screen.
+  private var openRoom: ThreadRoom?
   private var blobs: AvatarApi?
   private let notify = HelmNotifyDelegate()
   private let location = HelmLocation()
@@ -132,7 +134,7 @@ final class HelmModel: ObservableObject {
       applySample(id)
       applyShotChrome(theme: theme, open: open)
     } else {
-      hydrateDisk()
+      openThread()
       publish()
       refreshLook()
     }
@@ -287,8 +289,11 @@ final class HelmModel: ObservableObject {
     )
   }
 
+  /// Dials the room in Settings, after putting that room's thread on screen. A refused dial
+  /// shows why as the hint.
   func connect() {
     persistFields()
+    openThread()
     let err = mailboxConnectError(
       slug: slug,
       bearer: bearer,
@@ -335,6 +340,7 @@ final class HelmModel: ObservableObject {
 
   func sendText(spoken: Bool = false) {
     persistFields()
+    openThread()
     let photo = stagedPhoto
     guard composeHasTurn(text: compose, photo: photo) else {
       return
@@ -365,6 +371,7 @@ final class HelmModel: ObservableObject {
 
   func sendPin() {
     persistFields()
+    openThread()
     guard let geo = prefs.lastGeo else {
       mouth.setHint(geoHint(enabled: gpsOn, geo: nil))
       publish()
@@ -406,9 +413,8 @@ final class HelmModel: ObservableObject {
     }
   }
 
-  /// Switches to another agent's room from a Settings chip. Drops the old room's thread, boards,
-  /// look, read cursor, staged photo, and queued frames, loads the new room's cached thread, and
-  /// redials there. Picking the room already dialed changes nothing.
+  /// Switches to another agent's room from a Settings chip and dials it. Picking the room
+  /// already on screen changes nothing.
   ///
   /// - Parameter pick: The agent slug as listed for this account.
   func pickAgent(_ pick: String) {
@@ -416,21 +422,8 @@ final class HelmModel: ObservableObject {
       return
     }
     slug = room
-    if room == socket?.room?.slug {
-      return
-    }
-    mouth.replace(lines: [], up: false, hint: "")
-    mouth.setAvatarRev(0)
-    faceJpeg = nil
-    backdropJpeg = nil
-    stagedPhoto = nil
-    seen = SeenCursor()
-    _ = outbox.popAll()
-    hydrateDisk()
-    connect()
-    if socket?.room?.slug != room {
-      // The dial was refused. The old room's socket must not paint into this thread.
-      socket?.stop()
+    if room != openRoom?.slug {
+      connect()
     }
   }
 
@@ -589,7 +582,7 @@ final class HelmModel: ObservableObject {
       frame: frame,
       fresh: painted,
       origin: origin,
-      slug: socket?.room?.slug ?? slug,
+      slug: openRoom?.slug ?? slug,
       bearer: bearer,
       lang: langId
     )
@@ -682,8 +675,9 @@ final class HelmModel: ObservableObject {
     spike = ""
     prefs.putSpike("", persistToDisk: false)
     let origin = self.origin
+    let token = session.token
     DispatchQueue.global(qos: .userInitiated).async {
-      let me = HelmGoogle.fetchMe(origin: origin, token: session.token)
+      let me = HelmGoogle.fetchMe(origin: origin, token: token)
       DispatchQueue.main.async {
         if let me {
           self.agents = me.agents
@@ -822,8 +816,33 @@ final class HelmModel: ObservableObject {
     }
   }
 
-  private func hydrateDisk() {
-    let room = ThreadRoom(origin: origin, slug: slug, user: email)
+  /// Puts the thread of the room in Settings on screen, with its cached lines, read cursor, and
+  /// room theme. When the origin, agent, or account differs from the room already open, that
+  /// room's socket, thread, boards, look, read cursor, staged photo, queued frames, and speech
+  /// are dropped first, so none of it is painted, saved, sent, or acked as this room's.
+  /// A sample scene has no room.
+  private func openThread() {
+    if sampleShown {
+      return
+    }
+    // Keyed the way the socket dials, so retyping the same room in another form is no switch.
+    let room = ThreadRoom(
+      origin: normalizeMailboxOrigin(origin), slug: parseSlug(slug) ?? slug, user: email)
+    if room == openRoom {
+      return
+    }
+    if openRoom != nil {
+      socket?.stop()
+      voice.hush()
+      mouth.replace(lines: [], up: false, hint: "")
+      mouth.setAvatarRev(0)
+      faceJpeg = nil
+      backdropJpeg = nil
+      stagedPhoto = nil
+      seen = SeenCursor()
+      _ = outbox.popAll()
+    }
+    openRoom = room
     let cached = cache?.read(room) ?? []
     mouth.hydrate(cached)
     for line in cached {
@@ -831,16 +850,16 @@ final class HelmModel: ObservableObject {
         seen.remember(id: line.id, seq: seq)
       }
     }
-    roomTheme = prefs.roomTheme(slug)
+    mouth.setRoomTheme(prefs.roomTheme(room.slug))
   }
 
+  /// Saves the thread on screen under the room it belongs to, not whatever Settings shows.
   private func persistThread() {
-    if sampleShown {
+    guard !sampleShown, let openRoom else {
       return
     }
-    let room = ThreadRoom(origin: origin, slug: slug, user: email)
-    cache?.write(room, lines: mouth.lines)
-    prefs.putRoomTheme(slug, id: mouth.roomTheme)
+    cache?.write(openRoom, lines: mouth.lines)
+    prefs.putRoomTheme(openRoom.slug, id: mouth.roomTheme)
   }
 
   private func publish() {
