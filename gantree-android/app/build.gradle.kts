@@ -160,7 +160,7 @@ dependencies {
   testImplementation("junit:junit:4.13.2")
   testImplementation("org.json:json:20260814")
   testImplementation("com.squareup.okhttp3:mockwebserver:5.5.0")
-  testImplementation("org.robolectric:robolectric:4.17")
+  testImplementation("org.robolectric:robolectric:4.18.1")
   testImplementation("androidx.test:core:1.7.0")
   // Compose under Robolectric: HoldToTalkTest presses and lifts on the bar.
   testImplementation("androidx.compose.ui:ui-test-junit4")
